@@ -15,6 +15,12 @@ try:
 except:
     debug = True
 
+try:
+    do_not_run
+except:
+    do_not_run = False
+#do_not_run = True
+
 _trash = string.punctuation + string.whitespace
 # We will strip space and punctuation
 _header_regex = "^[dD](\d+)\s+(.*)"
@@ -30,7 +36,8 @@ def main(debug=False):
         unanswered = get_unanswered_mentions(r, already_processed)
         for summons in unanswered:
             try:
-                text = build_reply(get_answer(summons, r))
+                answers = get_answer(summons, r)
+                text = build_reply(answers, r, summons)
                 # TODO: Check if text is over post-length and chain replies
                 summons.reply(text)
                 already_processed.append(summons)
@@ -39,11 +46,20 @@ def main(debug=False):
                 time.sleep(1*60)
         time.sleep(5*60)
 
-def build_reply(answers):
+def build_reply(answers, r, summons):
     s  = "I'm happy to roll these for you.\n\n"
     for out, intro in answers:
         s += intro + "\n" + out
         s += "-----\n\n"
+    if not answers:
+        s += "Unfortunately, I can't seem to find any tables in this original post or any top-level comments.  "
+        s += "I'm sorry to have failed you.  My author has been notified.  Appropraite action will be taken.\n\n"
+        s += "-----\n\n"
+        #try:
+        #    # May fail due to captcha
+        #    r.send_message(recipient='PurelyApplied',
+        #                   subject='roll_one_for_me failure; no tables',
+        #                   message="Failed responce to [this]({}) summons.".format(summons.permalink))
     s += "^(*Beep boop I'm a bot.  If it looks like I've gone off the rails and might be summoning SkyNet, let /u/PurelyApplied know.*)"
     return s
 
@@ -187,9 +203,6 @@ def test():
     unmen = get_unanswered_mentions(r, [])
     return r, list(men), list(unmen)
 
-if __name__=="__main__":
-    main()
-
 # Depricated / scraps
 
 def get_post_text(post):
@@ -218,3 +231,9 @@ def generate_string(outcomes):
 
 def generate_reply(summons, r):
     pass
+
+####################
+
+if __name__=="__main__" and not do_not_run:
+    main()
+
