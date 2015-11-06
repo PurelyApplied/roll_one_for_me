@@ -17,7 +17,7 @@ except:
 
 _trash = string.punctuation + string.whitespace
 # We will strip space and punctuation
-_header_regex = "^d(\d+)\s+(.*)"
+_header_regex = "^[dD](\d+)\s+(.*)"
 _line_regex = "^(\d+)\.\s*(.*)"
 _summons_regex = "/u/roll_one_for_me"
 
