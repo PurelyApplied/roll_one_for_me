@@ -1,7 +1,7 @@
 #!/usr/bin/python3
-
+# For top-level comment scanning, you need to get submission's ID and call r.get_submission(url=None, id=ID).  Otherwise you only get the summoning comment (and perhaps the path to it)
 from pprint import pprint
-from string import punctuation
+import string
 import random
 import time
 import praw
@@ -15,18 +15,25 @@ try:
 except:
     debug = True
 
+class Table_Post():
+    def __init__(self, text):
+        self.text = text
+        self.tables = ([],[],[])
+    
+    def process(self):
+        pass
+
+    def get_tables(self):
+        return self.tables
+
+    def roll(self):
+        pass
+
+_trash = string.punctuation + string.whitespace
+# We will strip space and punctuation
 _header_regex = "^d(\d+)\s+(.*)"
 _line_regex = "^(\d+)\.\s*(.*)"
 _summons_regex = "/u/roll_one_for_me"
-
-def get_post_text(post):
-    if type(post) == praw.objects.Comment:
-        return post.body
-    elif type(post) == praw.objects.Submission:
-        return post.selftext
-    else:
-        raise RuntimeError("Attempt to get post text from non-Comment / non-Submission post.")
-
 
 def main(debug=False):
     '''main(debug=False)
@@ -68,6 +75,33 @@ def get_unanswered_mentions(r, already_processed):
             unanswered.append(item)
     return unanswered
 
+def get_post_text(post):
+    '''Returns text to parse from either Comment or Submission'''
+    if type(post) == praw.objects.Comment:
+        return post.body
+    elif type(post) == praw.objects.Submission:
+        return post.selftext
+    else:
+        raise RuntimeError("Attempt to get post text from non-Comment / non-Submission post.")
+
+def get_tables(text):
+    pass
+
+def generate_instance(tables):
+    '''def generate_instance(tables):
+    tables = ( Head_list, dice_list, results_list )
+    results_list[i] is a list of dice_list[i] possible outcomes.
+    These outcomes may contain an inline sublist.
+    Returns ...'''
+    
+    pass
+
+def generate_string(outcomes):
+    pass
+
+def generate_reply(summons, r):
+    pass
+
 def get_answer(summons, r):
     '''def get_answer(summons, r):
     Given a comment summons, generates a responce string'''
@@ -76,6 +110,8 @@ def get_answer(summons, r):
     #       That way it can generalize to parse top-level comments, too
     gen = get_generator(op_text)
     return gen()
+    items_to_examine = [summons.submission] + summons.submission.replies
+
 
 def get_generator(op_text):
     '''def get_generator(op_text):
@@ -88,18 +124,18 @@ def get_generator(op_text):
                 h = head_list[i]
                 d = dice_list[i]
                 r = random.randint(0, d-1)
-                out = result_list[i][r][1].strip().strip(punctuation)
+                out = result_list[i][r][1].strip(_trash)
                 out = out + determine_and_resolve_subroll(out)
                 s += "{}...    \n(d{} -> {}:) {}\n\n".format(h, d, r+1, out)
-            s += "-----\n^(Beep boop I'm a bot.  If it looks like I've gone off the rails and might be summoning SkyNet, let /u/PurelyApplied know.)"
+            s += "-----\n^(Beep boop I'm a bot.  If it looks like I've gone off the rails and might be summoning SkyNet, let PurelyApplied know.)"
             return s
         return _gen
     i = 0
     lines = op_text.split('\n')
     head, dice, res = [], [], []
     while i < len(lines):
-        l = lines[i].strip()
-        match = re.search(_header_regex, l.strip().strip(punctuation))
+        l = lines[i].strip(_trash)
+        match = re.search(_header_regex, l.strip(_trash))
         if match:
             #if debug:
             #    print("Matching line: %s"%l)
@@ -111,7 +147,7 @@ def get_generator(op_text):
             while remaining > 0:
                 #if debug:
                 #    print("Examine next line, j = %d ; remaining = %d " % (j, remaining) )
-                outcome_match = re.search(_line_regex, lines[j].strip().strip(punctuation))
+                outcome_match = re.search(_line_regex, lines[j].strip(_trash))
                 if outcome_match:
                     outcomes.append( (outcome_match.group(1), outcome_match.group(2) ) )
                     remaining -= 1
@@ -125,7 +161,6 @@ def get_generator(op_text):
             # print("{}    \n  (d{} -> {}) {}\n\n".format(descriptor.strip(), die, result[0], result[1]))
         i += 1
     return gen(head, dice, res)
-
 
 def determine_and_resolve_subroll(out):
     top = re.search('d(\d+)', out)
@@ -157,8 +192,8 @@ def determine_and_resolve_subroll(out):
         sub_re = slices[suboutcome-1]
         #print(slices)
         ret = "    \n(Inner table roll, d{} -> {}:) {}".format(die,
-                                                         sub_re.group(1).strip().strip(punctuation),
-                                                         sub_re.group(2).strip().strip(punctuation))
+                                                               sub_re.group(1).strip(_trash),
+                                                               sub_re.group(2).strip(_trash))
     except RuntimeError as e:
         print("Runtime error:", e)
         ret = "    \n>>> I'm having trouble resolving an inline subtable."
@@ -167,5 +202,8 @@ def determine_and_resolve_subroll(out):
 def roll(i):
     return random.randint(1, i)
 
-if __name__=="__main__":
-    main()
+def test():
+    r = sign_in()
+    men = r.get_mentions()
+    unmen = get_unanswered_mentions(r, [])
+    return r, list(men), list(unmen)
