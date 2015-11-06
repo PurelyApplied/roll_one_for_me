@@ -44,12 +44,22 @@ def main(debug=False):
         unanswered = get_unanswered_mentions(r, already_processed)
         for summons in unanswered:
             try:
-                summons.reply(get_answer(summons, r))
+                text = build_reply(get_answer(summons, r))
+                # TODO: Check if text is over post-length and chain replies
+                summons.reply(text)
                 already_processed.append(summons)
             except:
                 print("Could not answer summons.  Sleeping.")
                 time.sleep(1*60)
         time.sleep(5*60)
+
+def build_reply(answers):
+    s  = "I'm happy to roll these for you.\n\n"
+    for out, intro in answers:
+        s += intro + "\n" + out
+        s += "-----\n\n"
+    s += "^(*Beep boop I'm a bot.  If it looks like I've gone off the rails and might be summoning SkyNet, let /u/PurelyApplied know.*)"
+    return s
 
 def sign_in():
     '''Sign in to reddit using PRAW; returns Reddit handle'''
@@ -102,15 +112,26 @@ def generate_string(outcomes):
 def generate_reply(summons, r):
     pass
 
+def describe_source(post, was_OP=False):
+    desc = "the original post" if was_OP else "[this]({}) comment by /u/{}".format(post.permalink, post.author)
+    desc = "From some tables found in " + desc + "...\n"
+    return desc
+
 def get_answer(summons, r):
     '''def get_answer(summons, r):
     Given a comment summons, generates a responce string'''
+    # Texts exist as a tuple of ( text, author, link )
     op_text = summons.submission.selftext
+    children = r.get_submission(None, summons.submission.id).comments
+    All_rolled = [ get_generator(txt)() for txt in [op_text] + [x.body for x in children]]
+    ret = []
+    if All_rolled[0]:
+        ret = [ ( All_rolled[0], describe_source(summons.submission, was_OP=True) ) ]
+    ret = ret + [ (All_rolled[i+1], describe_source(children[i], was_OP=False) ) for i in range(len(children)) if All_rolled[i+1]]
+    return ret
     # TODO: Change this to return the trio of lists (head, dice, outcomes)
     #       That way it can generalize to parse top-level comments, too
-    gen = get_generator(op_text)
-    return gen()
-    items_to_examine = [summons.submission] + summons.submission.replies
+    # gen = get_generator(op_text)
 
 
 def get_generator(op_text):
@@ -127,9 +148,9 @@ def get_generator(op_text):
                 out = result_list[i][r][1].strip(_trash)
                 out = out + determine_and_resolve_subroll(out)
                 s += "{}...    \n(d{} -> {}:) {}\n\n".format(h, d, r+1, out)
-            s += "-----\n^(Beep boop I'm a bot.  If it looks like I've gone off the rails and might be summoning SkyNet, let PurelyApplied know.)"
             return s
         return _gen
+    ####################
     i = 0
     lines = op_text.split('\n')
     head, dice, res = [], [], []
