@@ -1,0 +1,8 @@
+d6 Roll|Armor|Weaponry|Arena gimmick|Identifying feature|Personal tragedy
+:--|:--|:--|:--|:--|:--|:--
+1. | None | Two shortswords | Dances atop fallen foes | Maritime tattoo | Doomed love affair
+2. | Leather scraps | Shortsword and shield | Rude gestures | Slave tattoo | Death of a spouse
+3. | Bronze helm | Spear and shield | Insults spectators | Scars on face | Death of a child
+4. | Iron helm | Net and trident | Flower for lady spectator | Scars on back | Wrongfully accused
+5. | Leather baldric | Scimitar and whip | Prays after killing | Long hair | Desperate criminal
+6. | Chainmail | Heavy flail | Never speaks | Extravagant mustache | Prisoner of war
