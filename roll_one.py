@@ -15,20 +15,6 @@ try:
 except:
     debug = True
 
-class Table_Post():
-    def __init__(self, text):
-        self.text = text
-        self.tables = ([],[],[])
-    
-    def process(self):
-        pass
-
-    def get_tables(self):
-        return self.tables
-
-    def roll(self):
-        pass
-
 _trash = string.punctuation + string.whitespace
 # We will strip space and punctuation
 _header_regex = "^d(\d+)\s+(.*)"
@@ -85,33 +71,6 @@ def get_unanswered_mentions(r, already_processed):
             unanswered.append(item)
     return unanswered
 
-def get_post_text(post):
-    '''Returns text to parse from either Comment or Submission'''
-    if type(post) == praw.objects.Comment:
-        return post.body
-    elif type(post) == praw.objects.Submission:
-        return post.selftext
-    else:
-        raise RuntimeError("Attempt to get post text from non-Comment / non-Submission post.")
-
-def get_tables(text):
-    pass
-
-def generate_instance(tables):
-    '''def generate_instance(tables):
-    tables = ( Head_list, dice_list, results_list )
-    results_list[i] is a list of dice_list[i] possible outcomes.
-    These outcomes may contain an inline sublist.
-    Returns ...'''
-    
-    pass
-
-def generate_string(outcomes):
-    pass
-
-def generate_reply(summons, r):
-    pass
-
 def describe_source(post, was_OP=False):
     desc = "the original post" if was_OP else "[this]({}) comment by /u/{}".format(post.permalink, post.author)
     desc = "From some tables found in " + desc + "...\n"
@@ -132,7 +91,6 @@ def get_answer(summons, r):
     # TODO: Change this to return the trio of lists (head, dice, outcomes)
     #       That way it can generalize to parse top-level comments, too
     # gen = get_generator(op_text)
-
 
 def get_generator(op_text):
     '''def get_generator(op_text):
@@ -231,3 +189,32 @@ def test():
 
 if __name__=="__main__":
     main()
+
+# Depricated / scraps
+
+def get_post_text(post):
+    '''Returns text to parse from either Comment or Submission'''
+    if type(post) == praw.objects.Comment:
+        return post.body
+    elif type(post) == praw.objects.Submission:
+        return post.selftext
+    else:
+        raise RuntimeError("Attempt to get post text from non-Comment / non-Submission post.")
+
+def get_tables(text):
+    pass
+
+def generate_instance(tables):
+    '''def generate_instance(tables):
+    tables = ( Head_list, dice_list, results_list )
+    results_list[i] is a list of dice_list[i] possible outcomes.
+    These outcomes may contain an inline sublist.
+    Returns ...'''
+    
+    pass
+
+def generate_string(outcomes):
+    pass
+
+def generate_reply(summons, r):
+    pass
