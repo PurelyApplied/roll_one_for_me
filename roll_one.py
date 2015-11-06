@@ -228,3 +228,6 @@ def test():
     men = r.get_mentions()
     unmen = get_unanswered_mentions(r, [])
     return r, list(men), list(unmen)
+
+if __name__=="__main__":
+    main()
