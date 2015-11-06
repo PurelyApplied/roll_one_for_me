@@ -19,7 +19,18 @@ _header_regex = "^d(\d+)\s+(.*)"
 _line_regex = "^(\d+)\.\s*(.*)"
 _summons_regex = "/u/roll_one_for_me"
 
+def get_post_text(post):
+    if type(post) == praw.objects.Comment:
+        return post.body
+    elif type(post) == praw.objects.Submission:
+        return post.selftext
+    else:
+        raise RuntimeError("Attempt to get post text from non-Comment / non-Submission post.")
+
+
 def main(debug=False):
+    '''main(debug=False)
+    Logs into Reddit, looks for unanswered user mentions, and generates and posts replies'''
     r = sign_in()
     already_processed = []
     while True:
@@ -32,17 +43,19 @@ def main(debug=False):
                 print("Could not answer summons.  Sleeping.")
                 time.sleep(1*60)
         time.sleep(5*60)
+
 def sign_in():
+    '''Sign in to reddit using PRAW; returns Reddit handle'''
     r = praw.Reddit('Generate an outcome for random tables, under the name /u/roll_one_for_me'
                     'Written and maintained by /u/PurelyApplied')
     # login info in praw.ini
-    if debug:
-        print("Logging into reddit...")
     r.login()
     return r
 
 def get_unanswered_mentions(r, already_processed):
-    '''get_unanswered_mentions(r, already_processed):'''
+    '''get_unanswered_mentions(r, already_processed)
+    Returns a list of Reddit comments that contain your username but to which you have not yet responded.
+    already_processed can be used to reduce required API calls, and is modified by this function call.'''
     mentions = r.get_mentions()
     unanswered = []
     for item in (i for i in mentions if i not in already_processed):
@@ -56,12 +69,17 @@ def get_unanswered_mentions(r, already_processed):
     return unanswered
 
 def get_answer(summons, r):
+    '''def get_answer(summons, r):
+    Given a comment summons, generates a responce string'''
     op_text = summons.submission.selftext
+    # TODO: Change this to return the trio of lists (head, dice, outcomes)
+    #       That way it can generalize to parse top-level comments, too
     gen = get_generator(op_text)
     return gen()
 
 def get_generator(op_text):
-    '''Returns generator function gen given OP text, such that gen() returns a string reply '''
+    '''def get_generator(op_text):
+    Returns generator function gen given OP text, such that gen() returns a string reply'''
     def gen(head_list, dice_list, result_list):
         assert len(head_list) == len(dice_list) == len(result_list), "Generator list length mismatch"
         def _gen():
@@ -107,6 +125,7 @@ def get_generator(op_text):
             # print("{}    \n  (d{} -> {}) {}\n\n".format(descriptor.strip(), die, result[0], result[1]))
         i += 1
     return gen(head, dice, res)
+
 
 def determine_and_resolve_subroll(out):
     top = re.search('d(\d+)', out)
