@@ -30,7 +30,8 @@ def main(debug=False):
                 already_processed.append(summons)
             except:
                 print("Could not answer summons.  Sleeping.")
-                time.sleep(10*60)
+                time.sleep(1*60)
+        time.sleep(5*60)
 def sign_in():
     r = praw.Reddit('Generate an outcome for random tables, under the name /u/roll_one_for_me'
                     'Written and maintained by /u/PurelyApplied')
