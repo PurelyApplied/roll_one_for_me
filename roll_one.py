@@ -27,6 +27,8 @@ _line_regex = "^(\d+)\.\s*(.*)"
 _summons_regex = "/u/roll_one_for_me"
 _mentions_attempts = 10
 _answer_attempts = 10
+_sleep_on_error = 30
+_sleep_between_checks = 60 * 5
 
 def main(debug=False):
     '''main(debug=False)
@@ -49,12 +51,12 @@ def main(debug=False):
                         except Exception as e:
                             print("Problem answering summmons.")
                             print(e)
-                            time.sleep(1*60)
+                            time.sleep(_sleep_on_error)
                     else:
                         print("Could not answer this summons.  Adding this comment to Ignore list")
                         ignore_list.append(summons)
                         raise RuntimeError("Error during response generation.")
-                time.sleep(5*60)
+                time.sleep(_sleep_between_checks)
         except Exception as e:
             print("Top level error.")
             print(e)
@@ -111,7 +113,7 @@ def get_unanswered_mentions(r, already_processed):
         except Exception as e:
             print("Failure in get_unanswered_mentions.  Failure count: {}.".format(attempt+1) )
             print(e)
-            time.sleep(60)
+            time.sleep(_sleep_on_error)
     else:
         raise RuntimeError("Exceed error limit ({}) in get_unanswered_mentions.".format(_mentions_attempts))
         
