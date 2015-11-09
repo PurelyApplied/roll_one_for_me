@@ -74,6 +74,7 @@ def main(debug=False):
                         print("Could not answer this summons.  Adding this comment to Ignore list")
                         ignore_list.append(summons)
                         raise RuntimeError("Error during response generation.")
+                # Check copy against existing.
                 pickle.dump( (already_processed, ignore_list), open(_pickle_filename, 'wb'))
                 time.sleep(_sleep_between_checks)
         except Exception as e:
@@ -261,8 +262,9 @@ def roll(i):
 
 def test():
     r = sign_in()
+    already, ignore = pickle.load(open(_pickle_filename, 'rb'))
     men = r.get_mentions()
-    unmen = get_unanswered_mentions(r, [])
+    unmen = get_unanswered_mentions(r, already+ignore)
     return r, list(men), list(unmen)
 
 # Depricated / scraps
