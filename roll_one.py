@@ -6,16 +6,22 @@ import random
 import time
 import praw
 import re
+import pickle
 
 def doc(func):
     print(func.__doc__)
 
 # These exist for ease of testing.
+do_not_run = True
+debug = True
+try:
+    debug
+except:
+    debug = False
 try:
     do_not_run
 except:
     do_not_run = False
-#do_not_run = True
 
 ##################
 # Some constants #
@@ -23,12 +29,14 @@ except:
 # We will strip space and punctuation
 _trash = string.punctuation + string.whitespace
 _header_regex = "^[dD](\d+)\s+(.*)"
-_line_regex = "^(\d+)\.\s*(.*)"
+#_line_regex = "^(\d+)\.\s*(.*)"
+_line_regex = "^(\d+)\s*(.*)"
 _summons_regex = "/u/roll_one_for_me"
 _mentions_attempts = 10
 _answer_attempts = 10
 _sleep_on_error = 30
 _sleep_between_checks = 60 * 5
+_pickle_filename = "roll_one.pickles"
 
 def main(debug=False):
     '''main(debug=False)
@@ -36,8 +44,12 @@ def main(debug=False):
     while True:
         try:
             r = sign_in()
-            already_processed = []
-            ignore_list = []
+            try:
+                already_processed, ignore_list = pickle.load(open(_pickle_filename, 'rb'))
+            except:
+                already_processed = []
+                ignore_list = []
+            already_last = already_processed.copy()
             while True:
                 unanswered = get_unanswered_mentions(r, already_processed + ignore_list)
                 for summons in unanswered:
@@ -55,10 +67,12 @@ def main(debug=False):
                             print("Problem answering summmons.")
                             print(e)
                             time.sleep(_sleep_on_error)
+                            attempt += 1
                     if not success:
                         print("Could not answer this summons.  Adding this comment to Ignore list")
                         ignore_list.append(summons)
                         raise RuntimeError("Error during response generation.")
+                pickle.dump( (already_processed, ignore_list), open(_pickle_filename, 'wb'))
                 time.sleep(_sleep_between_checks)
         except Exception as e:
             print("Top level error.")
@@ -102,10 +116,15 @@ def get_unanswered_mentions(r, already_processed):
     already_processed can be used to reduce required API calls, and is modified by this function call.'''
     for attempt in range(_mentions_attempts):
         try:
+            if debug: print("Fetching mentions")
             mentions = r.get_mentions()
             unanswered = []
+            if debug: print("Pruning answered mentions")
             for item in (i for i in mentions if i not in already_processed):
+                if debug: 
+                    print("Considering mention by /u/{}, thread title:\n  {}".format(item.author, item.submission.title) )
                 answered_this = False
+                if debug: print("Examining children...")
                 for child in item.replies:
                     if child.author == r.user:
                         answered_this = True
@@ -165,26 +184,34 @@ def get_generator(op_text):
         l = lines[i].strip(_trash)
         match = re.search(_header_regex, l.strip(_trash))
         if match:
-            #if debug:
-            #    print("Matching line: %s"%l)
+            if debug:
+                print("Matching line: %s"%l)
             die = int(match.group(1))
             outcomes = []
             descriptor = match.group(2)
             remaining = die
             j = i + 1
             while remaining > 0:
-                #if debug:
-                #    print("Examine next line, j = %d ; remaining = %d " % (j, remaining) )
+                failure = False
+                if debug:
+                    print("Examine next line, j = %d ; remaining = %d, printed below:\n %s " % (j, remaining, lines[j].strip(_trash)) )
                 outcome_match = re.search(_line_regex, lines[j].strip(_trash))
                 if outcome_match:
                     outcomes.append( (outcome_match.group(1), outcome_match.group(2) ) )
                     remaining -= 1
                 j += 1
                 if j - i > 3 * die:
-                    raise RuntimeError("Could not extract values for event: >> %s <<"%descriptor)
-            dice.append(die)
-            head.append(descriptor)
-            res.append(outcomes)
+                    #raise RuntimeError("Could not extract values for event: >> %s <<"%descriptor)
+                    print("Could not extract values for event: >> %s <<"%descriptor)
+                    failure = True
+            if failure:
+                dice.append(1)
+                head.append(descriptor)
+                res.append(('1', '**Could not parse.**'))
+            else:
+                dice.append(die)
+                head.append(descriptor)
+                res.append(outcomes)
             #result = roll(outcomes)
             # print("{}    \n  (d{} -> {}) {}\n\n".format(descriptor.strip(), die, result[0], result[1]))
         i += 1
