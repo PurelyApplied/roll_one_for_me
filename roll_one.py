@@ -188,7 +188,7 @@ def get_generator(op_text):
     return gen(head, dice, res)
 
 def determine_and_resolve_subroll(out):
-    top = re.search('d(\d+)', out)
+    top = re.search('[dD](\d+)', out)
     if not top:
         return ""
     try:
