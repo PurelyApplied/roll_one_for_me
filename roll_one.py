@@ -12,8 +12,8 @@ def doc(func):
     print(func.__doc__)
 
 # These exist for ease of testing.
-do_not_run = True
-debug = True
+#do_not_run = True
+#debug = True
 try:
     debug
 except:
