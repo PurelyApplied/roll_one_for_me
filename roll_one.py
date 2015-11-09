@@ -49,7 +49,9 @@ def main(debug=False):
             except:
                 already_processed = []
                 ignore_list = []
-            already_last = already_processed.copy()
+            #already_last = already_processed.copy()
+            # Apparently .copy() is newer than 3.2?  And Pi's are always behind.
+            already_last = already_processed[:]
             while True:
                 unanswered = get_unanswered_mentions(r, already_processed + ignore_list)
                 for summons in unanswered:
