@@ -10,43 +10,63 @@ import re
 def doc(func):
     print(func.__doc__)
 
-try:
-    debug
-except:
-    debug = True
-
+# These exist for ease of testing.
 try:
     do_not_run
 except:
     do_not_run = False
 #do_not_run = True
 
-_trash = string.punctuation + string.whitespace
+##################
+# Some constants #
+##################
 # We will strip space and punctuation
+_trash = string.punctuation + string.whitespace
 _header_regex = "^[dD](\d+)\s+(.*)"
 _line_regex = "^(\d+)\.\s*(.*)"
 _summons_regex = "/u/roll_one_for_me"
+_mentions_attempts = 10
+_answer_attempts = 10
 
 def main(debug=False):
     '''main(debug=False)
     Logs into Reddit, looks for unanswered user mentions, and generates and posts replies'''
-    r = sign_in()
-    already_processed = []
     while True:
-        unanswered = get_unanswered_mentions(r, already_processed)
-        for summons in unanswered:
-            try:
-                answers = get_answer(summons, r)
-                text = build_reply(answers, r, summons)
-                # TODO: Check if text is over post-length and chain replies
-                summons.reply(text)
-                already_processed.append(summons)
-            except:
-                print("Could not answer summons.  Sleeping.")
-                time.sleep(1*60)
-        time.sleep(5*60)
+        try:
+            r = sign_in()
+            already_processed = []
+            ignore_list = []
+            while True:
+                unanswered = get_unanswered_mentions(r, already_processed + ignore_list)
+                for summons in unanswered:
+                    for attempt in range(_answer_attempts):
+                        try:
+                            answers = get_answer(summons, r)
+                            text = build_reply(answers, r, summons)
+                            # TODO: Check if text is over post-length and chain replies
+                            summons.reply(text)
+                            already_processed.append(summons)
+                        except Exception as e:
+                            print("Problem answering summmons.")
+                            print(e)
+                            time.sleep(1*60)
+                    else:
+                        print("Could not answer this summons.  Adding this comment to Ignore list")
+                        ignore_list.append(summons)
+                        raise RuntimeError("Error during response generation.")
+                time.sleep(5*60)
+        except Exception as e:
+            print("Top level error.")
+            print(e)
+            print("Executing a full reset.")
 
 def build_reply(answers, r, summons):
+    '''build_reply(answers, r, summons):
+    Builds reply given a list of string tuples
+    
+    answers: A list of string tuples, (output, intro)
+    r: praw.*.Reddit handle
+    summons: Comment reference for reply, intended for error handling but currently unused'''
     s  = "I'm happy to roll these for you.\n\n"
     for out, intro in answers:
         s += intro + "\n" + out
@@ -75,18 +95,26 @@ def get_unanswered_mentions(r, already_processed):
     '''get_unanswered_mentions(r, already_processed)
     Returns a list of Reddit comments that contain your username but to which you have not yet responded.
     already_processed can be used to reduce required API calls, and is modified by this function call.'''
-    mentions = r.get_mentions()
-    unanswered = []
-    for item in (i for i in mentions if i not in already_processed):
-        answered_this = False
-        for child in item.replies:
-            if child.author == r.user:
-                answered_this = True
-                already_processed.append(item)
-        if not answered_this:
-            unanswered.append(item)
-    return unanswered
-
+    for attempt in range(_mentions_attempts):
+        try:
+            mentions = r.get_mentions()
+            unanswered = []
+            for item in (i for i in mentions if i not in already_processed):
+                answered_this = False
+                for child in item.replies:
+                    if child.author == r.user:
+                        answered_this = True
+                        already_processed.append(item)
+                if not answered_this:
+                    unanswered.append(item)
+            return unanswered
+        except Exception as e:
+            print("Failure in get_unanswered_mentions.  Failure count: {}.".format(attempt+1) )
+            print(e)
+            time.sleep(60)
+    else:
+        raise RuntimeError("Exceed error limit ({}) in get_unanswered_mentions.".format(_mentions_attempts))
+        
 def describe_source(post, was_OP=False):
     desc = "the original post" if was_OP else "[this]({}) comment by /u/{}".format(post.permalink, post.author)
     desc = "From some tables found in " + desc + "...\n"
@@ -189,7 +217,7 @@ def determine_and_resolve_subroll(out):
         ret = "    \n(Inner table roll, d{} -> {}:) {}".format(die,
                                                                sub_re.group(1).strip(_trash),
                                                                sub_re.group(2).strip(_trash))
-    except RuntimeError as e:
+    except Exception as e:
         print("Runtime error:", e)
         ret = "    \n>>> I'm having trouble resolving an inline subtable."
     return ret
