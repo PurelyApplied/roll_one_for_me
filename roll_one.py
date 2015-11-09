@@ -41,18 +41,21 @@ def main(debug=False):
             while True:
                 unanswered = get_unanswered_mentions(r, already_processed + ignore_list)
                 for summons in unanswered:
-                    for attempt in range(_answer_attempts):
+                    attempt = 0
+                    success = False
+                    while attempt < _answer_attempts and not success:
                         try:
                             answers = get_answer(summons, r)
                             text = build_reply(answers, r, summons)
                             # TODO: Check if text is over post-length and chain replies
                             summons.reply(text)
                             already_processed.append(summons)
+                            success = True
                         except Exception as e:
                             print("Problem answering summmons.")
                             print(e)
                             time.sleep(_sleep_on_error)
-                    else:
+                    if not success:
                         print("Could not answer this summons.  Adding this comment to Ignore list")
                         ignore_list.append(summons)
                         raise RuntimeError("Error during response generation.")
