@@ -69,7 +69,7 @@ def main(debug=False):
                 ignore_list = []
             #already_last = already_processed.copy()
             # Apparently .copy() is newer than 3.2?  And Pi's are always behind.
-            already_last = already_processed[:]
+            already_last_count = len(already_processed)
             while True:
                 log("Fetching unanswered mentions.")
                 unanswered = get_unanswered_mentions(r, already_processed + ignore_list)
@@ -95,8 +95,11 @@ def main(debug=False):
                         log("Final failure to answer comment at {}".format(summons.permalink ))
                         ignore_list.append(summons)
                         raise RuntimeError("Error during response generation.")
-                # Check copy against existing.
-                pickle.dump( (already_processed, ignore_list), open(_pickle_filename, 'wb'))
+                # TODO: Check copy against existing.
+                if len(already_processed) > already_last_count:
+                    log("Pickling already processed (length now {}) and ignore list (length {})".format(len(already_processed), len(ignore_list)))
+                    pickle.dump( (already_processed, ignore_list), open(_pickle_filename, 'wb'))
+                log("End of pass.  Sleeping.")
                 time.sleep(_sleep_between_checks)
         except Exception as e:
             log("Top level.  Executing full reset.  Error details to follow.")
