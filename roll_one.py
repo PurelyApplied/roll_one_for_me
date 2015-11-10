@@ -71,7 +71,7 @@ def main(debug=False):
                 log("Fetching unread mail.")
                 my_mail = list(r.get_unread(unset_has_mail=False))
                 log("Mail fetched.  Processing.")
-                to_process = [x in my_mail if not in [y[0] for y in unidentified] ]
+                to_process = [x for x in my_mail if not x in [y[0] for y in unidentified] ]
                 for item in to_process:
                     if is_summons(item):
                         log("Answering summons at {}.".format(item.permalink))
