@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 # For top-level comment scanning, you need to get submission's ID and call r.get_submission(url=None, id=ID).  Otherwise you only get the summoning comment (and perhaps the path to it)
+
+
+# To add: Look for tables that are actual tables.
+# Look for keyword ROLL in tables and scan for arbitrary depth
 from pprint import pprint
 import string
 import random
