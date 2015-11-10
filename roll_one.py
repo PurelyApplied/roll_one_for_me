@@ -40,7 +40,7 @@ _summons_regex = "/u/roll_one_for_me"
 _mentions_attempts = 10
 _answer_attempts = 10
 _sleep_on_error = 10
-_sleep_between_checks = 30
+_sleep_between_checks = 60
 _pickle_filename = "pickle.cache"
 _log_filename = "rofm.log"
 _log = None
@@ -58,52 +58,62 @@ def main(debug=False):
     global _log
     _log = open(_log_filename, 'a')
     log("Begin main()")
+    try:
+        unidentified = pickle.load(open(_pickle_filename, "rb"))
+    except:
+        unidentified = []
+    L_unIDed = len(unidentified)
     while True:
         try:
             log("Signing into Reddit.")
             r = sign_in()
-            try:
-                already_processed, ignore_list = pickle.load(open(_pickle_filename, 'rb'))
-            except:
-                already_processed = []
-                ignore_list = []
-            #already_last = already_processed.copy()
-            # Apparently .copy() is newer than 3.2?  And Pi's are always behind.
-            already_last_count = len(already_processed)
             while True:
-                log("Fetching unanswered mentions.")
-                unanswered = get_unanswered_mentions(r, already_processed + ignore_list)
-                log("Answering unanswered mentions.")
-                for summons in unanswered:
-                    attempt = 0
-                    success = False
-                    while attempt < _answer_attempts and not success:
-                        try:
-                            answers = get_answer(summons, r)
-                            text = build_reply(answers, r, summons)
-                            # TODO: Check if text is over post-length and chain replies
-                            summons.reply(text)
-                            already_processed.append(summons)
-                            success = True
-                            log("Answered comment at {}.".format(summons.permalink))
-                        except Exception as e:
-                            log("Failed to answer comment.  Failure #{}.  Comment at {}.".format(attempt + 1, summons.permalink ))
-                            log("Error as follows: {}".format(e))
-                            time.sleep(_sleep_on_error)
-                            attempt += 1
-                    if not success:
-                        log("Final failure to answer comment at {}".format(summons.permalink ))
-                        ignore_list.append(summons)
-                        raise RuntimeError("Error during response generation.")
-                # TODO: Check copy against existing.
-                if len(already_processed) > already_last_count:
-                    log("Pickling already processed (length now {}) and ignore list (length {})".format(len(already_processed), len(ignore_list)))
-                    pickle.dump( (already_processed, ignore_list), open(_pickle_filename, 'wb'))
+                log("Fetching unread mail.")
+                my_mail = list(r.get_unread(unset_has_mail=False))
+                log("Mail fetched.  Processing.")
+                to_process = [x in my_mail if not in [y[0] for y in unidentified] ]
+                for item in to_process:
+                    if is_summons(item):
+                        log("Answering summons at {}.".format(item.permalink))
+                        answer_summons(item, r)
+                    else:
+                        log("Mail is not summons.  Probably a reply?  Item at {}".format(item.permalink))
+                        my_replies = list(r.get_comment_replies())
+                        unidentified.append( (item, "Comment reply?") )
+                if len(unidentified) > L_unIDed:
+                    L_unIDed = len(unidentified)
+                    log("Pickling unidentified items for future investigation.  Current count: {}.".format(L_unIDed) )
+                    pickle.dump(unidentified, open(_pickle_filename, "wb"))
                 log("End of pass.  Sleeping.")
                 time.sleep(_sleep_between_checks)
         except Exception as e:
             log("Top level.  Executing full reset.  Error details to follow.")
             log("Error: {}".format(e))
+
+def is_summons(item):
+    return re.search(_summons_regex, item.body)
+
+def answer_summons(summons, r):
+    attempt = 0
+    success = False
+    while attempt < _answer_attempts and not success:
+        try:
+            answers = get_answer(summons, r)
+            text = build_reply(answers, r, summons)
+            # TODO: Check if text is over post-length and chain replies
+            summons.reply(text)
+            success = True
+            log("Comment answered.  Marking mail as read.")
+            summons.mark_as_read()
+        except Exception as e:
+            log("Failed to answer comment.  Failure #{}.  Comment at {}.".format(attempt + 1, summons.permalink ))
+            log("Error as follows: {}".format(e))
+            time.sleep(_sleep_on_error)
+            attempt += 1
+    if not success:
+        log("Final failure to answer comment at {}".format(summons.permalink ))
+        ignore_list.append(summons)
+        raise RuntimeError("Error during response generation.")
 
 def build_reply(answers, r, summons):
     '''build_reply(answers, r, summons):
@@ -136,34 +146,6 @@ def sign_in():
     r.login()
     return r
 
-# TODO: This is taking far too long.  I need to see if unread will serve my needs
-def get_unanswered_mentions(r, already_processed):
-    '''get_unanswered_mentions(r, already_processed)
-    Returns a list of Reddit comments that contain your username but to which you have not yet responded.
-    already_processed can be used to reduce required API calls, and is modified by this function call.'''
-    for attempt in range(_mentions_attempts):
-        try:
-            mentions = r.get_mentions()
-            unanswered = []
-            for item in (i for i in mentions if i not in already_processed):
-                if debug: 
-                    print("Considering mention by /u/{}, thread title:\n  {}".format(item.author, item.submission.title) )
-                answered_this = False
-                if debug: print("Examining children...")
-                for child in item.replies:
-                    if child.author == r.user:
-                        answered_this = True
-                        already_processed.append(item)
-                if not answered_this:
-                    unanswered.append(item)
-            return unanswered
-        except Exception as e:
-            log("Failure in get_unanswered_mentions.  Failure count: {}.".format(attempt+1) )
-            log("Error as follows: {}".format(e))
-            time.sleep(_sleep_on_error)
-    else:
-        raise RuntimeError("Exceed error limit ({}) in get_unanswered_mentions.".format(_mentions_attempts))
-        
 def describe_source(post, was_OP=False):
     desc = "the original post" if was_OP else "[this]({}) comment by {}".format(post.permalink, post.author)
     desc = "From some tables found in " + desc + "...\n"
@@ -286,12 +268,10 @@ def roll(i):
 
 def test():
     r = sign_in()
-    already, ignore = pickle.load(open(_pickle_filename, 'rb'))
+    # already, ignore = pickle.load(open(_pickle_filename, 'rb'))
     men = r.get_mentions()
-    unmen = get_unanswered_mentions(r, already+ignore)
+    unmen = get_unanswered_mentions(r, [])
     return r, list(men), list(unmen)
-
-# Depricated / scraps
 
 def get_post_text(post):
     '''Returns text to parse from either Comment or Submission'''
@@ -301,24 +281,6 @@ def get_post_text(post):
         return post.selftext
     else:
         raise RuntimeError("Attempt to get post text from non-Comment / non-Submission post.")
-
-def get_tables(text):
-    pass
-
-def generate_instance(tables):
-    '''def generate_instance(tables):
-    tables = ( Head_list, dice_list, results_list )
-    results_list[i] is a list of dice_list[i] possible outcomes.
-    These outcomes may contain an inline sublist.
-    Returns ...'''
-    
-    pass
-
-def generate_string(outcomes):
-    pass
-
-def generate_reply(summons, r):
-    pass
 
 ####################
 
