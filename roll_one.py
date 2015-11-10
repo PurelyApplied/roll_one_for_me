@@ -39,22 +39,23 @@ _line_regex = "^(\d+)\s*(.*)"
 _summons_regex = "/u/roll_one_for_me"
 _mentions_attempts = 10
 _answer_attempts = 10
-_sleep_on_error = 30
-_sleep_between_checks = 60
+_sleep_on_error = 10
+_sleep_between_checks = 30
 _pickle_filename = "pickle.cache"
-_log_filename = "roll.log"
-_log_handle = None
+_log_filename = "rofm.log"
+_log = None
 
 def log(s):
-    global _log_handle
-    if not _log_handle:
-        return
-    _log_handle.write("{} ; {}\n".format(time.ctime(), s))
+    global _log
+    if not _log:
+        raise RuntimeError("Could not open log file.")
+    _log.write("{} ; {}\n".format(time.ctime(), s))
+    _log.flush()
 
 def main(debug=False):
     '''main(debug=False)
     Logs into Reddit, looks for unanswered user mentions, and generates and posts replies'''
-    global _log_handle
+    global _log
     _log = open(_log_filename, 'a')
     log("Begin main()")
     while True:
@@ -161,7 +162,7 @@ def get_unanswered_mentions(r, already_processed):
         raise RuntimeError("Exceed error limit ({}) in get_unanswered_mentions.".format(_mentions_attempts))
         
 def describe_source(post, was_OP=False):
-    desc = "the original post" if was_OP else "[this]({}) comment by /u/{}".format(post.permalink, post.author)
+    desc = "the original post" if was_OP else "[this]({}) comment by {}".format(post.permalink, post.author)
     desc = "From some tables found in " + desc + "...\n"
     return desc
 
