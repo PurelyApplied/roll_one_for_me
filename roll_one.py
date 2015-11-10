@@ -71,7 +71,9 @@ def main(debug=False):
                 log("Fetching unread mail.")
                 my_mail = list(r.get_unread(unset_has_mail=False))
                 log("Mail fetched.  Processing.")
-                to_process = [x for x in my_mail if not x in [y[0] for y in unidentified] ]
+                unIDed_tags = [y[0] for y in unidentified]
+                to_process = [x for x in my_mail if x not in unIDed_tags]
+                log("{} items found to process.".format(len(to_process)))
                 for item in to_process:
                     if is_summons(item):
                         log("Answering summons at {}.".format(item.permalink))
@@ -89,6 +91,7 @@ def main(debug=False):
         except Exception as e:
             log("Top level.  Executing full reset.  Error details to follow.")
             log("Error: {}".format(e))
+            time.sleep(_sleep_on_error)
 
 def is_summons(item):
     return re.search(_summons_regex, item.body)
