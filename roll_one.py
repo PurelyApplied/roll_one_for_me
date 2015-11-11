@@ -65,7 +65,7 @@ def main(debug=False):
         try:
             log("Signing into Reddit.")
             r = sign_in()
-            trivial_passes_count = 0
+            trivial_passes_count = _trivial_passes_per_heartbeat - 1
             while True:
                 # log("Fetching unread mail.")
                 my_mail = list(r.get_unread(unset_has_mail=False))
@@ -90,7 +90,7 @@ def main(debug=False):
                 else:
                     trivial_passes_count = 0
                 if trivial_passes_count == _trivial_passes_per_heartbeat:
-                    log("Heartbeat.  {} passes without incident.".format(trivial_passes_per_heartbeat))
+                    log("Heartbeat.  {} passes without incident (or first pass).".format(_trivial_passes_per_heartbeat))
                     trivial_passes_count = 0
                 time.sleep(_sleep_between_checks)
         except Exception as e:
