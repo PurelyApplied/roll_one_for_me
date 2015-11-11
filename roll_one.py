@@ -97,7 +97,7 @@ def main(debug=False):
             time.sleep(_sleep_on_error)
 
 def is_summons(item):
-    return re.search(_summons_regex, item.body)
+    return re.search(_summons_regex, item.body.lower())
 
 def answer_summons(summons, r):
     attempt = 0
