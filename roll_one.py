@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 # For top-level comment scanning, you need to get submission's ID and call r.get_submission(url=None, id=ID).  Otherwise you only get the summoning comment (and perhaps the path to it)
 
-
 # To add: Look for tables that are actual tables.
 # Look for keyword ROLL in tables and scan for arbitrary depth
 from pprint import pprint
@@ -40,6 +39,22 @@ _pickle_filename = "pickle.cache"
 _log_filename = "rofm.log"
 _log = None
 _trivial_passes_per_heartbeat = 10
+
+
+class TablePost:
+    def __init__(self, praw_ref=None):
+        self.ref = praw_ref
+
+    def get_text(self):
+        '''Returns text to parse from either Comment or Submission'''
+        if type(self.ref) == praw.objects.Comment:
+            return self.ref.body
+        elif type(self.ref) == praw.objects.Submission:
+            return self.ref.selftext
+        else:
+            raise RuntimeError("Attempt to get post text from non-Comment / non-Submission post.")
+        
+
 
 def log(s):
     global _log
