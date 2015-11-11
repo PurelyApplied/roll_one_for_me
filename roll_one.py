@@ -44,6 +44,8 @@ _trivial_passes_per_heartbeat = 10
 def log(s):
     global _log
     if not _log:
+        if debug:
+            return
         raise RuntimeError("Could not open log file.")
     _log.write("{} ; {}\n".format(time.ctime(), s))
     _log.flush()
@@ -241,7 +243,7 @@ def determine_and_resolve_subroll(out):
         #print("> > > Rolling a d{}, end of stuff: {}".format(die, subtable))
         slices = []
         for subroll in range(1, die):
-            this_regex = "({})(.*){}".format(subroll, subroll + 1)
+            this_regex = "({})(.*?){}".format(subroll, subroll + 1)
             #print("> > > Attempting to match this regex:\n> {}\n> > against this\n> {}\n".format(this_regex, subtable))
             slices.append(re.search(this_regex, subtable))
             #print("> > > Examining piece %s..."%subtable)
