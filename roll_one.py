@@ -5,12 +5,7 @@
 # To add: Look for tables that are actual tables.
 # Look for keyword ROLL in tables and scan for arbitrary depth
 from pprint import pprint
-import string
-import random
-import time
-import praw
-import re
-import pickle
+import string, random, time, praw, re, pickle
 
 def doc(func):
     print(func.__doc__)
@@ -44,6 +39,7 @@ _sleep_between_checks = 60
 _pickle_filename = "pickle.cache"
 _log_filename = "rofm.log"
 _log = None
+_trivial_passes_per_heartbeat = 10
 
 def log(s):
     global _log
@@ -67,13 +63,14 @@ def main(debug=False):
         try:
             log("Signing into Reddit.")
             r = sign_in()
+            trivial_passes_count = 0
             while True:
-                log("Fetching unread mail.")
+                # log("Fetching unread mail.")
                 my_mail = list(r.get_unread(unset_has_mail=False))
-                log("Mail fetched.  Processing.")
+                # log("Mail fetched.  Processing.")
                 unIDed_tags = [y[0] for y in unidentified]
                 to_process = [x for x in my_mail if x not in unIDed_tags]
-                log("{} items found to process.".format(len(to_process)))
+                # log("{} items found to process.".format(len(to_process)))
                 for item in to_process:
                     if is_summons(item):
                         log("Answering summons at {}.".format(item.permalink))
@@ -86,7 +83,13 @@ def main(debug=False):
                     L_unIDed = len(unidentified)
                     log("Pickling unidentified items for future investigation.  Current count: {}.".format(L_unIDed) )
                     pickle.dump(unidentified, open(_pickle_filename, "wb"))
-                log("End of pass.  Sleeping.")
+                if len(to_process) == 0:
+                    trivial_passes_count += 1
+                else:
+                    trivial_passes_count = 0
+                if trivial_passes_count == _trivial_passes_per_heartbeat:
+                    log("Heartbeat.  {} passes without incident.".format(trivial_passes_per_heartbeat))
+                    trivial_passes_count = 0
                 time.sleep(_sleep_between_checks)
         except Exception as e:
             log("Top level.  Executing full reset.  Error details to follow.")
