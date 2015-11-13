@@ -287,9 +287,8 @@ def roll(i):
 def test():
     r = sign_in()
     # already, ignore = pickle.load(open(_pickle_filename, 'rb'))
-    men = r.get_mentions()
-    unmen = get_unanswered_mentions(r, [])
-    return r, list(men), list(unmen)
+    my_mail = list(r.get_unread(unset_has_mail=False))
+    return r, my_mail
 
 def get_post_text(post):
     '''Returns text to parse from either Comment or Submission'''
