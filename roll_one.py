@@ -174,13 +174,13 @@ def get_generator(op_text):
                     d = len(result_list[i])
                     # TODO: log
                 r = random.randint(0, d-1)
-                print("result_list =",result_list)
-                print("i =",i)
+                #print("result_list =",result_list)
+                #print("i =",i)
                 out_A = result_list[i]
-                print("out_A =",out_A)
-                print("r =",r)
+                #print("out_A =",out_A)
+                #print("r =",r)
                 out_B = out_A[r]
-                print("out_B =",out_B)
+                #print("out_B =",out_B)
                 out_C = out_B[1].strip(_trash)
                 out = out_C + determine_and_resolve_subroll(out_C)
                 s += "{}...    \n(d{} -> {}:) {}\n\n".format(h, d, r+1, out)
