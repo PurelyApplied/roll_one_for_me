@@ -30,16 +30,44 @@ _log = None
 _trivial_passes_per_heartbeat = 10
 
 class Request:
-    pass
+    def __init__(self, praw_ref):
+        self.origin = praw_ref
+        self.tables = []
+        
+    def text(self):
+        if type(self.origin) == praw.objects.Comment:
+            return self.origin.body
+        elif type(self.origin) == praw.objects.Submission:
+            return self.origin.selftext
+        else:
+            return ""
 
 class Logger:
+    def __init__(self, log_directory, log_filename):
+        self.log_filename = log_filename
+
+    
     pass
 
 class Core:
     pass
 
 class TableItem:
+    '''TableItem
     pass
+
+class Table:
+    def __init__(self, text):
+        self.text = text
+        self.die = None
+        # List of TableItem objects
+        self.outcomes = []
+
+    def roll(self):
+        pass
+
+    def parse(self):
+        pass
 
 
 def log(s):
