@@ -29,6 +29,19 @@ _log_filename = "rofm.log"
 _log = None
 _trivial_passes_per_heartbeat = 10
 
+class Request:
+    pass
+
+class Logger:
+    pass
+
+class Core:
+    pass
+
+class TableItem:
+    pass
+
+
 def log(s):
     global _log
     if not _log:
