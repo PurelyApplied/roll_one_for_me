@@ -8,6 +8,9 @@ import string, random, time, praw, re, pickle
 def doc(func):
     print(func.__doc__)
 
+def fdate():
+    return "-".join(str(x) for x in time.gmtime()[:6])
+
 ##################
 # Some constants #
 ##################
