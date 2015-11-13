@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 # For top-level comment scanning, you need to get submission's ID and call r.get_submission(url=None, id=ID).  Otherwise you only get the summoning comment (and perhaps the path to it)
 
-
 # To add: Look for tables that are actual tables.
 # Look for keyword ROLL in tables and scan for arbitrary depth
 from pprint import pprint
@@ -11,17 +10,7 @@ def doc(func):
     print(func.__doc__)
 
 # These exist for ease of testing.
-#do_not_run = True
-#debug = True
-try:
-    debug
-except:
-    debug = False
-
-try:
-    do_not_run
-except:
-    do_not_run = False
+debug = ("y" in input("Enable debugging?  ").lower() )
 
 ##################
 # Some constants #
@@ -40,6 +29,55 @@ _pickle_filename = "pickle.cache"
 _log_filename = "rofm.log"
 _log = None
 _trivial_passes_per_heartbeat = 10
+
+class TableItem():
+    def __init__(self, die=0, header="", outcomes=None):
+        # Need inline subtable representation
+        self.outcomes = outcomes if outcomes else []
+        self.header = header
+        self.die = die
+
+    def get_outcome(self):
+        pass
+    
+class Request:
+    def __init__(self, praw_ref=None):
+        self.ref = praw_ref
+        self.linked = None
+        self.request_type = None
+        
+    def determine_linked_tables(self):
+        pass
+
+    # Selective, repeated, ranges, pm
+
+    def reply_type(self):
+        pass
+
+    def get_request_text(self):
+        '''Returns text to parse from either Comment or Submission'''
+        if not self.praw:
+            return ''
+        elif type(self.ref) == praw.objects.Comment:
+            return self.ref.body
+        elif type(self.ref) == praw.objects.Submission:
+            return self.ref.selftext
+        else:
+            raise RuntimeError("Attempt to get post text from non-Comment / non-Submission post.")
+
+class Log():
+    def __init__(self, log_filename):
+        pass
+
+    def error(self, e):
+        pass
+
+    def post(self, p):
+        pass
+
+    def update(self, u):
+        pass
+
 
 def log(s):
     global _log
@@ -293,5 +331,6 @@ def get_post_text(post):
 ####################
 
 if __name__=="__main__" and not do_not_run:
-    main()
+    if 'y' in input("Run main?  ").lower():
+        main()
 
