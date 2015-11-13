@@ -5,12 +5,8 @@
 # Look for keyword ROLL in tables and scan for arbitrary depth
 from pprint import pprint
 import string, random, time, praw, re, pickle
-
 def doc(func):
     print(func.__doc__)
-
-# These exist for ease of testing.
-debug = ("y" in input("Enable debugging?  ").lower() )
 
 ##################
 # Some constants #
@@ -109,7 +105,7 @@ def answer_summons(summons, r):
             attempt += 1
     if not success:
         log("Final failure to answer comment at {}".format(summons.permalink ))
-        ignore_list.append(summons)
+        # ignore_list.append(summons)
         raise RuntimeError("Error during response generation.")
 
 def build_reply(answers, r, summons):
@@ -174,9 +170,19 @@ def get_generator(op_text):
             for i in range(len(head_list)):
                 h = head_list[i]
                 d = dice_list[i]
+                if d > len(result_list[i]):
+                    d = len(result_list[i])
+                    # TODO: log
                 r = random.randint(0, d-1)
-                out = result_list[i][r][1].strip(_trash)
-                out = out + determine_and_resolve_subroll(out)
+                print("result_list =",result_list)
+                print("i =",i)
+                out_A = result_list[i]
+                print("out_A =",out_A)
+                print("r =",r)
+                out_B = out_A[r]
+                print("out_B =",out_B)
+                out_C = out_B[1].strip(_trash)
+                out = out_C + determine_and_resolve_subroll(out_C)
                 s += "{}...    \n(d{} -> {}:) {}\n\n".format(h, d, r+1, out)
             return s
         return _gen
@@ -188,15 +194,15 @@ def get_generator(op_text):
         l = lines[i].strip(_trash)
         match = re.search(_header_regex, l.strip(_trash))
         if match:
-            if debug:
-                print("Matching line: %s"%l)
             die = int(match.group(1))
+            if debug:
+                print("Matching line header, with d%d: %s"%(die,l))
             outcomes = []
             descriptor = match.group(2)
             remaining = die
             j = i + 1
-            while remaining > 0:
-                failure = False
+            failure = False
+            while remaining > 0 and not failure:
                 if debug:
                     print("Examine next line, j = %d ; remaining = %d, printed below:\n %s " % (j, remaining, lines[j].strip(_trash)) )
                 outcome_match = re.search(_line_regex, lines[j].strip(_trash))
@@ -204,18 +210,17 @@ def get_generator(op_text):
                     outcomes.append( (outcome_match.group(1), outcome_match.group(2) ) )
                     remaining -= 1
                 j += 1
-                if j - i > 3 * die:
+                if j - i > 3 * die or j == len(lines):
                     #raise RuntimeError("Could not extract values for event: >> %s <<"%descriptor)
                     print("Could not extract values for event: >> %s <<"%descriptor)
                     failure = True
             if failure:
-                dice.append(1)
-                head.append(descriptor)
-                res.append(('1', '**Could not parse.**'))
-            else:
-                dice.append(die)
-                head.append(descriptor)
-                res.append(outcomes)
+                die = 1
+                # head.append(descriptor)
+                outcomes = [('1', '**Could not parse.**')]
+            dice.append(die)
+            head.append(descriptor)
+            res.append(outcomes)
             #result = roll(outcomes)
             # print("{}    \n  (d{} -> {}) {}\n\n".format(descriptor.strip(), die, result[0], result[1]))
         i += 1
@@ -281,6 +286,7 @@ def get_post_text(post):
 
 ####################
 
+debug = ("y" in input("Enable debugging?  ").lower() )
 if __name__=="__main__":
     if 'y' in input("Run main?  ").lower():
         main()
