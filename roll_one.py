@@ -248,7 +248,7 @@ class TableRoll:
         if self.sub:
             #ret += str(self.sub.outcome)
             print("type=", type(self.sub))
-            ret += "(Subtable d{} -> {}) *Inline table parsing temoprarily disabled.*".format(self.sub.die, random.randint(1, self.sub.die))
+            ret += "(Subtable d{} -> {}) *Inline table parsing temporarily disabled.*".format(self.sub.die, random.randint(1, self.sub.die))
         ret += "\n\n"
         return ret
 
@@ -339,13 +339,13 @@ def build_reply(answers, r, summons):
         s += "-----\n\n"
     if not answers:
         s += "Unfortunately, I can't seem to find any tables in this original post or any top-level comments.  "
-        s += "I'm sorry to have failed you.  My author has been notified.  Appropraite action will be taken.\n\n"
+        s += "I'm sorry to have failed you.  My author has been notified.  Appropriate action will be taken.\n\n"
         s += "-----\n\n"
         #try:
         #    # May fail due to captcha
         #    r.send_message(recipient='PurelyApplied',
         #                   subject='roll_one_for_me failure; no tables',
-        #                   message="Failed responce to [this]({}) summons.".format(summons.permalink))
+        #                   message="Failed response to [this]({}) summons.".format(summons.permalink))
     s += ("^(*Beep boop I'm a bot.  " +
           "You can find details about me at " + 
           "[this](https://www.reddit.com/r/DnDBehindTheScreen/comments/3rryc9/introducing_a_new_bot_uroll_one_for_me_for_all/) post.  " +
@@ -367,7 +367,7 @@ def describe_source(post, was_OP=False):
 
 def get_answer(summons, r):
     '''def get_answer(summons, r):
-    Given a comment summons, generates a responce string'''
+    Given a comment summons, generates a response string'''
     # Texts exist as a tuple of ( text, author, link )
     op_text = summons.submission.selftext
     children = r.get_submission(None, summons.submission.id).comments
