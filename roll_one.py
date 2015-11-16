@@ -14,6 +14,8 @@ def fdate():
 ##################
 # Some constants #
 ##################
+_version="1.0.1"
+_last_updated="2015-11-16"
 # We will strip space and punctuation
 _trash = string.punctuation + string.whitespace
 _header_regex = "^[dD](\d+)\s+(.*)"
@@ -57,18 +59,20 @@ class Request:
     # determine params, identify targets
     def parse(self):
         # TODO(Parse params, change targets, pass to Table calls
-        children = r.get_submission(None, self.origin.submission.id).comments
-        targets = [self.origin.submission] + children
-        for item in targets:
-            T = TableSource(item)
+        T = TableSource(self.origin.submission, "this thread's original post")
+        if T.has_tables():
+            self.tables_sources.append(T)
+        top_level_comments = self.reddit.get_submission(None, self.origin.submission.id).comments
+        for item in top_level_comments:
+            T = TableSource(item, "[this]({}) comment by {}".format(item.permalink, item.author) )
             if T.has_tables():
                 T.parse()
                 self.tables_sources.append(T)
         
     def roll(self):
-        self.instance = [TS.roll() for TS in self.tables_sources]
-        return self.instance
-
+        instance = [TS.roll() for TS in self.tables_sources]
+        return "\n\n-----\n\n".join(instance)
+        
     def reply(self, r):
         pass
 
@@ -85,20 +89,23 @@ class Request:
         return "<Request from /u/{} in thread \"{}\">".format(self.origin.author, self.origin.submission.title)
 
 class TableSource:
-    def __init__(self, praw_ref):
+    def __init__(self, praw_ref, descriptor):
         self.source = praw_ref
+        self.desc = descriptor
         self.tables = []
-        self.instance = None
 
         self.parse()
         
     def __repr__(self):
-        return "<TableSource by /u/{} at href: {}>".format(self.source.author, self.source.permalink)
+        return "<TableSource from {}>".format(self.desc)
 
 
     def roll(self):
-        self.instance = [T.roll() for T in self.tables]
-        return self.instance
+        instance = [T.roll() for T in self.tables]
+        ret = "From {}...\n\n".format(self.desc)
+        for item in instance:
+            ret += item.unpack()
+        return ret
 
     def has_tables(self):
         return ( 0 < len(self.tables) )
@@ -132,6 +139,7 @@ class Table:
         self.header = ""
         self.outcomes = []
         self.instance = None
+        self.is_inline = False
 
         self.parse()
 
@@ -171,6 +179,8 @@ class TableItem:
 
     def parse(self):
         main_regex = re.search(_line_regex, self.text.strip(_trash))
+        if not main_regex:
+            return
         self.outcome = main_regex.group(1)
         if re.search("[dD]\d+", self.outcome):
             die_regex = re.search("[dD]\d+", self.outcome)
@@ -193,46 +203,54 @@ class InlineTable:
         
         self.parse()
 
+    def __repr__(self):
+        return "<d{} Inline table>".format(self.die)
+
     def parse(self):
         top = re.search("[dD](\d+)", self.text)
-        die = int(top.group(1))
+        self.die = int(top.group(1))
         #subtable = self.text[top.end():]
         #slices = []
         # TODO
-        for subroll in range(1, die):
+        for subroll in range(1, self.die):
             self.outcomes.append(TableItem("Subtable rolling temporarily disabled."))
 
     def roll(self):
-        cast = random.randomint(1, self.die)
+        cast = random.randint(1, self.die)
         ind = cast - 1
         R = TableRoll(self.die, cast, "", self.outcomes[ind])
         if len(self.outcomes) != self.die:
             R.error("Inline table expected {} items found {}".format(self.die, len(self.outcomes)))
-        return self.instance
+        return R
 
 class TableRoll:
-    def __init__(self, d, rolled, head, out, sub=None, err=None):
+    def __init__(self, d, rolled, head, out, err=None):
         self.d = d
         self.rolled = rolled
         self.head = head
         self.out = out
-        self.sub = sub
+        self.sub = out.inline_table
         self.sub_out = None
         self.err = err
 
-        if self.sub and self.sub.inline_table:
+        if self.sub:
             self.sob_out = self.sub.roll()
         
     def __repr__(self):
-        ret  = "{}...\n    ".format(self.head.strip(_trash))
-        ret += "(d{} -> {}) {}.    \n".format(self.d, self.rolled, self.out.outcome)
-        if self.sub:
-            ret += str(self.sub_out.outcome)
-        ret += "\n\n"
-        return ret
+        return "<d{} TableRoll: {}>".format(self.d, self.head)
 
     def error(self, e):
         self.err = e
+
+    def unpack(self):
+        ret  = "{}...    \n".format(self.head.strip(_trash))
+        ret += "(d{} -> {}) {}.    \n".format(self.d, self.rolled, self.out.outcome)
+        if self.sub:
+            #ret += str(self.sub.outcome)
+            print("type=", type(self.sub))
+            ret += "(Subtable d{} -> {}) *Inline table parsing temoprarily disabled.*".format(self.sub.die, random.randint(1, self.sub.die))
+        ret += "\n\n"
+        return ret
 
 class Logger:
     def __init__(self, log_directory, log_filename):
@@ -329,9 +347,9 @@ def build_reply(answers, r, summons):
         #                   subject='roll_one_for_me failure; no tables',
         #                   message="Failed responce to [this]({}) summons.".format(summons.permalink))
     s += ("^(*Beep boop I'm a bot.  " +
-          "As I grow, you can find my details at " + 
+          "You can find details about me at " + 
           "[this](https://www.reddit.com/r/DnDBehindTheScreen/comments/3rryc9/introducing_a_new_bot_uroll_one_for_me_for_all/) post.  " +
-          "If it looks like I've gone off the rails and might be summoning SkyNet, let /u/PurelyApplied know.*)" )
+          "If it looks like I've gone off the rails and might be summoning SkyNet, let /u/PurelyApplied know, even though he sees all of these because of the mentions anyway.*)" )
     return s
 
 def sign_in():
@@ -475,7 +493,8 @@ def test():
     r = sign_in()
     # already, ignore = pickle.load(open(_pickle_filename, 'rb'))
     my_mail = list(r.get_unread(unset_has_mail=False))
-    return r, my_mail
+    mentions = list(r.get_mentions())
+    return r, my_mail, mentions
 
 def get_post_text(post):
     '''Returns text to parse from either Comment or Submission'''
