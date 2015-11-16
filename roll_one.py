@@ -18,7 +18,7 @@ def fdate():
 _trash = string.punctuation + string.whitespace
 _header_regex = "^[dD](\d+)\s+(.*)"
 #_line_regex = "^(\d+)\.\s*(.*)"
-_line_regex = "^(\d+)\s*(.*)"
+_line_regex = "^\d+\s*(.*)"
 _summons_regex = "u/roll_one_for_me"
 _mentions_attempts = 10
 _answer_attempts = 10
@@ -27,13 +27,25 @@ _sleep_between_checks = 60
 _pickle_filename = "pickle.cache"
 _log_filename = "rofm.log"
 _log = None
-_trivial_passes_per_heartbeat = 10
+_trivial_passes_per_heartbeat = 30
+# A Request may refer to many collections
+# A Collection refers to many tables
+# A table refers to many TableItems
+# A TableItem may contain an inline subtable
 
+
+# Structure: A single post will contain many tables
+# Tables contain TableItems
 class Request:
-    def __init__(self, praw_ref):
+    def __init__(self, praw_ref, r):
         self.origin = praw_ref
-        self.tables = []
-        
+        self.reddit = r
+        self.tables_sources = []
+        self.outcome = None
+        self.instance = None
+
+        self.parse()
+
     def text(self):
         if type(self.origin) == praw.objects.Comment:
             return self.origin.body
@@ -41,34 +53,193 @@ class Request:
             return self.origin.selftext
         else:
             return ""
+        
+    # determine params, identify targets
+    def parse(self):
+        # TODO(Parse params, change targets, pass to Table calls
+        children = r.get_submission(None, self.origin.submission.id).comments
+        targets = [self.origin.submission] + children
+        for item in targets:
+            T = TableSource(item)
+            if T.has_tables():
+                T.parse()
+                self.tables_sources.append(T)
+        
+    def roll(self):
+        self.instance = [TS.roll() for TS in self.tables_sources]
+        return self.instance
+
+    def reply(self, r):
+        pass
+
+    def is_summons(self):
+        return re.search(_summons_regex, get_post_text(self.origin).lower())
+
+    def log(self):
+        pass
+
+    def describe_source(self):
+        return "From [this]({}) post by user {}...".format(self.source.permalink, self.source.author)
+
+    def __repr__(self):
+        return "<Request from /u/{} in thread \"{}\">".format(self.origin.author, self.origin.submission.title)
+
+class TableSource:
+    def __init__(self, praw_ref):
+        self.source = praw_ref
+        self.tables = []
+        self.instance = None
+
+        self.parse()
+        
+    def __repr__(self):
+        return "<TableSource by /u/{} at href: {}>".format(self.source.author, self.source.permalink)
+
+
+    def roll(self):
+        self.instance = [T.roll() for T in self.tables]
+        return self.instance
+
+    def has_tables(self):
+        return ( 0 < len(self.tables) )
+
+    def parse(self):
+        indices = []
+        last_index = 0
+        text = get_post_text(self.source)
+        lines = text.split("\n")
+        for line_num in range(len(lines)):
+            l = lines[line_num]
+            if re.search(_header_regex, l.strip(_trash)):
+                indices.append(line_num)
+        # TODO: if no headers found
+        if len(indices) == 0:
+            return None
+        
+        table_text = []
+        for i in range(len(indices) -1):
+            table_text.append("\n".join(lines[ indices[i]:indices[i+1] ]))
+        table_text.append("\n".join(lines[ indices[-1]: ]))
+
+        self.tables = [ Table(t) for t in table_text ]
+
+class Table:
+    '''Container for a single set of TableItem objects
+    A single post will likely contain many Table objects'''
+    def __init__(self, text):
+        self.text = text
+        self.die = None
+        self.header = ""
+        self.outcomes = []
+        self.instance = None
+
+        self.parse()
+
+    def __repr__(self):
+        return "<Table with header: {}>".format(self.text.split('\n')[0])
+
+    def roll(self):
+        c = random.randint(1, self.die)
+        ind = c - 1
+        R = TableRoll(d=self.die,
+                      rolled=c,
+                      head=self.header,
+                      out=self.outcomes[ind])
+        if len(self.outcomes) != self.die:
+            R.error("Expected {} items found {}".format(self.die, len(self.outcomes)))
+        return R
+
+    def parse(self):
+        lines = self.text.split('\n')
+        head = lines.pop(0)
+        head_match = re.search(_header_regex, head.strip(_trash))
+        self.die = int(head_match.group(1))
+        self.header = head_match.group(2)
+        self.outcomes = [ TableItem(l) for l in lines if re.search(_line_regex, l.strip(_trash)) ]
+
+class TableItem:
+    '''This class allows simple handling of in-line subtables'''
+    def __init__(self, text):
+        self.text = text
+        self.inline_table = None
+        self.outcome = ""
+
+        self.parse()
+
+    def __repr__(self):
+        return "<TableItem: {}{}>".format(self.outcome, "; has inline table" if self.inline_table else "")
+
+    def parse(self):
+        main_regex = re.search(_line_regex, self.text.strip(_trash))
+        self.outcome = main_regex.group(1)
+        if re.search("[dD]\d+", self.outcome):
+            die_regex = re.search("[dD]\d+", self.outcome)
+            self.inline_table = InlineTable(self.outcome[die_regex.start():])
+            self.outcome = self.outcome[:die_regex.start()].strip(_trash)
+        self.outcome = self.outcome.strip(_trash)
+
+    def get(self):
+        if self.inline_table:
+            return self.outcome + self.inline_table.roll()
+        else:
+            return self.outcome
+        
+class InlineTable:
+    def __init__(self, text):
+        self.text = text
+        self.die = None
+        self.outcomes = []
+        self.header = ""
+        
+        self.parse()
+
+    def parse(self):
+        top = re.search("[dD](\d+)", self.text)
+        die = int(top.group(1))
+        #subtable = self.text[top.end():]
+        #slices = []
+        # TODO
+        for subroll in range(1, die):
+            self.outcomes.append(TableItem("Subtable rolling temporarily disabled."))
+
+    def roll(self):
+        cast = random.randomint(1, self.die)
+        ind = cast - 1
+        R = TableRoll(self.die, cast, "", self.outcomes[ind])
+        if len(self.outcomes) != self.die:
+            R.error("Inline table expected {} items found {}".format(self.die, len(self.outcomes)))
+        return self.instance
+
+class TableRoll:
+    def __init__(self, d, rolled, head, out, sub=None, err=None):
+        self.d = d
+        self.rolled = rolled
+        self.head = head
+        self.out = out
+        self.sub = sub
+        self.sub_out = None
+        self.err = err
+
+        if self.sub and self.sub.inline_table:
+            self.sob_out = self.sub.roll()
+        
+    def __repr__(self):
+        ret  = "{}...\n    ".format(self.head.strip(_trash))
+        ret += "(d{} -> {}) {}.    \n".format(self.d, self.rolled, self.out.outcome)
+        if self.sub:
+            ret += str(self.sub_out.outcome)
+        ret += "\n\n"
+        return ret
+
+    def error(self, e):
+        self.err = e
 
 class Logger:
     def __init__(self, log_directory, log_filename):
         self.log_filename = log_filename
 
-    
-    pass
-
 class Core:
     pass
-
-class TableItem:
-    '''TableItem
-    pass
-
-class Table:
-    def __init__(self, text):
-        self.text = text
-        self.die = None
-        # List of TableItem objects
-        self.outcomes = []
-
-    def roll(self):
-        pass
-
-    def parse(self):
-        pass
-
 
 def log(s):
     global _log
@@ -79,17 +250,12 @@ def log(s):
     _log.write("{} ; {}\n".format(time.ctime(), s))
     _log.flush()
 
+####################
+
 def main(debug=False):
     '''main(debug=False)
     Logs into Reddit, looks for unanswered user mentions, and generates and posts replies'''
-    global _log
-    _log = open(_log_filename, 'a')
     log("Begin main()")
-    try:
-        unidentified = pickle.load(open(_pickle_filename, "rb"))
-    except:
-        unidentified = []
-    L_unIDed = len(unidentified)
     while True:
         try:
             log("Signing into Reddit.")
@@ -98,26 +264,19 @@ def main(debug=False):
             while True:
                 # log("Fetching unread mail.")
                 my_mail = list(r.get_unread(unset_has_mail=False))
-                # log("Mail fetched.  Processing.")
-                unIDed_tags = [y[0] for y in unidentified]
-                to_process = [x for x in my_mail if x not in unIDed_tags]
+                to_process = [Request(x) for x in my_mail if x not in unIDed_tags]
                 # log("{} items found to process.".format(len(to_process)))
                 for item in to_process:
-                    if is_summons(item):
-                        log("Answering summons at {}.".format(item.permalink))
-                        answer_summons(item, r)
+                    if item.is_summons():
+                        item.parse()
+                        item.roll()
+                        item.reply(r)
                     else:
                         log("Mail is not summons.  Probably a reply?  Item at {}".format(item.permalink))
                         my_replies = list(r.get_comment_replies())
                         unidentified.append( (item, "Comment reply?") )
-                if len(unidentified) > L_unIDed:
-                    L_unIDed = len(unidentified)
-                    log("Pickling unidentified items for future investigation.  Current count: {}.".format(L_unIDed) )
-                    pickle.dump(unidentified, open(_pickle_filename, "wb"))
-                if len(to_process) == 0:
-                    trivial_passes_count += 1
-                else:
-                    trivial_passes_count = 0
+                    item.log()
+                trivial_passes_count += 1 if len(to_process) == 0 else 0
                 if trivial_passes_count == _trivial_passes_per_heartbeat:
                     log("Heartbeat.  {} passes without incident (or first pass).".format(_trivial_passes_per_heartbeat))
                     trivial_passes_count = 0
@@ -126,9 +285,6 @@ def main(debug=False):
             log("Top level.  Executing full reset.  Error details to follow.")
             log("Error: {}".format(e))
             time.sleep(_sleep_on_error)
-
-def is_summons(item):
-    return re.search(_summons_regex, item.body.lower())
 
 def answer_summons(summons, r):
     attempt = 0
@@ -172,7 +328,10 @@ def build_reply(answers, r, summons):
         #    r.send_message(recipient='PurelyApplied',
         #                   subject='roll_one_for_me failure; no tables',
         #                   message="Failed responce to [this]({}) summons.".format(summons.permalink))
-    s += "^(*Beep boop I'm a bot.  If it looks like I've gone off the rails and might be summoning SkyNet, let /u/PurelyApplied know.*)"
+    s += ("^(*Beep boop I'm a bot.  " +
+          "As I grow, you can find my details at " + 
+          "[this](https://www.reddit.com/r/DnDBehindTheScreen/comments/3rryc9/introducing_a_new_bot_uroll_one_for_me_for_all/) post.  " +
+          "If it looks like I've gone off the rails and might be summoning SkyNet, let /u/PurelyApplied know.*)" )
     return s
 
 def sign_in():
@@ -180,7 +339,7 @@ def sign_in():
     r = praw.Reddit('Generate an outcome for random tables, under the name /u/roll_one_for_me'
                     'Written and maintained by /u/PurelyApplied')
     # login info in praw.ini
-    r.login()
+    r.login(disable_warning=True)
     return r
 
 def describe_source(post, was_OP=False):
@@ -333,4 +492,3 @@ debug = ("y" in input("Enable debugging?  ").lower() )
 if __name__=="__main__":
     if 'y' in input("Run main?  ").lower():
         main()
-
