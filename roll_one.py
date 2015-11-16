@@ -73,8 +73,8 @@ class Request:
         instance = [TS.roll() for TS in self.tables_sources]
         return "\n\n-----\n\n".join(instance)
         
-    def reply(self, r):
-        pass
+    def reply(self, reply_text):
+        self.origin.reply(reply_text)
 
     def is_summons(self):
         return re.search(_summons_regex, get_post_text(self.origin).lower())
@@ -286,9 +286,8 @@ def main(debug=False):
                 # log("{} items found to process.".format(len(to_process)))
                 for item in to_process:
                     if item.is_summons():
-                        item.parse()
-                        item.roll()
-                        item.reply(r)
+                        reply_text = item.roll()
+                        item.reply(reply_text)
                     else:
                         log("Mail is not summons.  Probably a reply?  Item at {}".format(item.permalink))
                         my_replies = list(r.get_comment_replies())
