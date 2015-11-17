@@ -18,22 +18,25 @@ def fdate():
 ##################
 # Some constants #
 ##################
-_version="1.0.1"
-_last_updated="2015-11-16"
-# We will strip space and punctuation
+_version="1.1.0"
+_last_updated="2015-11-17"
+
 _trash = string.punctuation + string.whitespace
-_header_regex = "^[dD](\d+)\s+(.*)"
-#_line_regex = "^(\d+)\.\s*(.*)"
+
+_header_regex = "^[dD](\d+)(.*)"
 _line_regex = "^\d+\s*(.*)"
 _summons_regex = "u/roll_one_for_me"
+
 _mentions_attempts = 10
 _answer_attempts = 10
+
 _sleep_on_error = 10
 _sleep_between_checks = 60
-_pickle_filename = "pickle.cache"
+
 _log_filename = "rofm.log"
 _log = None
 _log_dir = "./logs"
+
 _trivial_passes_per_heartbeat = 30
 
 def main(debug=False):
@@ -51,16 +54,20 @@ def main(debug=False):
             while True:
                 # log("Fetching unread mail.")
                 my_mail = list(r.get_unread(unset_has_mail=False))
-                to_process = [Request(x) for x in my_mail]
+                to_process = [Request(x, r) for x in my_mail]
                 # log("{} items found to process.".format(len(to_process)))
                 for item in to_process:
                     if item.is_summons():
                         reply_text = item.roll()
+                        reply_text += BeepBoop()
                         item.reply(reply_text)
+                        log("Successfully resolving request: /u/{} @ {}.".format(item.origin.author,
+                                                                                 item.origin.permalink))
                     else:
-                        log("Mail is not summons.  Logging item.".format(item.permalink))
+                        log("Mail is not summons.  Logging item.")
                         item.log()
                     item.origin.mark_as_read()
+                    trivial_passes_count = 0
                 trivial_passes_count += 1 if len(to_process) == 0 else 0
                 if trivial_passes_count == _trivial_passes_per_heartbeat:
                     log("Heartbeat.  {} passes without incident (or first pass).".format(_trivial_passes_per_heartbeat))
@@ -71,52 +78,12 @@ def main(debug=False):
             log("Error: {}".format(e))
             time.sleep(_sleep_on_error)
 
-def answer_summons(summons, r):
-    attempt = 0
-    success = False
-    while attempt < _answer_attempts and not success:
-        try:
-            answers = get_answer(summons, r)
-            text = build_reply(answers, r, summons)
-            # TODO: Check if text is over post-length and chain replies
-            summons.reply(text)
-            success = True
-            log("Comment answered.  Marking mail as read.")
-            summons.mark_as_read()
-        except Exception as e:
-            log("Failed to answer comment.  Failure #{}.  Comment at {}.".format(attempt + 1, summons.permalink ))
-            log("Error as follows: {}".format(e))
-            time.sleep(_sleep_on_error)
-            attempt += 1
-    if not success:
-        log("Final failure to answer comment at {}".format(summons.permalink ))
-        # ignore_list.append(summons)
-        raise RuntimeError("Error during response generation.")
-
-def build_reply(answers, r, summons):
-    '''build_reply(answers, r, summons):
-    Builds reply given a list of string tuples
-    
-    answers: A list of string tuples, (output, intro)
-    r: praw.*.Reddit handle
-    summons: Comment reference for reply, intended for error handling but currently unused'''
-    s  = "I'm happy to roll these for you.\n\n"
-    for out, intro in answers:
-        s += intro + "\n" + out
-        s += "-----\n\n"
-    if not answers:
-        s += "Unfortunately, I can't seem to find any tables in this original post or any top-level comments.  "
-        s += "I'm sorry to have failed you.  My author has been notified.  Appropriate action will be taken.\n\n"
-        s += "-----\n\n"
-        #try:
-        #    # May fail due to captcha
-        #    r.send_message(recipient='PurelyApplied',
-        #                   subject='roll_one_for_me failure; no tables',
-        #                   message="Failed response to [this]({}) summons.".format(summons.permalink))
-    s += ("^(*Beep boop I'm a bot.  " +
+def BeepBoop():
+    s = "\n\n-----\n\n"
+    s += ("*Beep boop I'm a bot.  " +
           "You can find details about me at " + 
           "[this](https://www.reddit.com/r/DnDBehindTheScreen/comments/3rryc9/introducing_a_new_bot_uroll_one_for_me_for_all/) post.  " +
-          "If it looks like I've gone off the rails and might be summoning SkyNet, let /u/PurelyApplied know, even though he sees all of these because of the mentions anyway.*)" )
+          "If it looks like I've gone off the rails and might be summoning SkyNet, let /u/PurelyApplied know, even though he sees all of these because of the mentions anyway.*" )
     s += "\n\n^(v{}; code base last updated {})".format(_version, _last_updated)
     return s
 
@@ -127,135 +94,6 @@ def sign_in():
     # login info in praw.ini
     r.login(disable_warning=True)
     return r
-
-def describe_source(post, was_OP=False):
-    desc = "the original post" if was_OP else "[this]({}) comment by {}".format(post.permalink, post.author)
-    desc = "From some tables found in " + desc + "...\n"
-    return desc
-
-def get_answer(summons, r):
-    '''def get_answer(summons, r):
-    Given a comment summons, generates a response string'''
-    # Texts exist as a tuple of ( text, author, link )
-    op_text = summons.submission.selftext
-    children = r.get_submission(None, summons.submission.id).comments
-    All_rolled = [ get_generator(txt)() for txt in [op_text] + [x.body for x in children]]
-    ret = []
-    if All_rolled[0]:
-        ret = [ ( All_rolled[0], describe_source(summons.submission, was_OP=True) ) ]
-    ret = ret + [ (All_rolled[i+1], describe_source(children[i], was_OP=False) ) for i in range(len(children)) if All_rolled[i+1]]
-    return ret
-    # TODO: Change this to return the trio of lists (head, dice, outcomes)
-    #       That way it can generalize to parse top-level comments, too
-    # gen = get_generator(op_text)
-
-def get_generator(op_text):
-    '''def get_generator(op_text):
-    Returns generator function gen given OP text, such that gen() returns a string reply'''
-    def gen(head_list, dice_list, result_list):
-        assert len(head_list) == len(dice_list) == len(result_list), "Generator list length mismatch"
-        def _gen():
-            s = ''
-            for i in range(len(head_list)):
-                h = head_list[i]
-                d = dice_list[i]
-                if d > len(result_list[i]):
-                    d = len(result_list[i])
-                    # TODO: log
-                r = random.randint(0, d-1)
-                #print("result_list =",result_list)
-                #print("i =",i)
-                out_A = result_list[i]
-                #print("out_A =",out_A)
-                #print("r =",r)
-                out_B = out_A[r]
-                #print("out_B =",out_B)
-                out_C = out_B[1].strip(_trash)
-                out = out_C + determine_and_resolve_subroll(out_C)
-                s += "{}...    \n(d{} -> {}:) {}\n\n".format(h, d, r+1, out)
-            return s
-        return _gen
-    ####################
-    i = 0
-    lines = op_text.split('\n')
-    head, dice, res = [], [], []
-    while i < len(lines):
-        l = lines[i].strip(_trash)
-        match = re.search(_header_regex, l.strip(_trash))
-        if match:
-            die = int(match.group(1))
-            if debug:
-                print("Matching line header, with d%d: %s"%(die,l))
-            outcomes = []
-            descriptor = match.group(2)
-            remaining = die
-            j = i + 1
-            failure = False
-            while remaining > 0 and not failure:
-                if debug:
-                    print("Examine next line, j = %d ; remaining = %d, printed below:\n %s " % (j, remaining, lines[j].strip(_trash)) )
-                outcome_match = re.search(_line_regex, lines[j].strip(_trash))
-                if outcome_match:
-                    outcomes.append( (outcome_match.group(1), outcome_match.group(2) ) )
-                    remaining -= 1
-                j += 1
-                if j - i > 3 * die or j == len(lines):
-                    #raise RuntimeError("Could not extract values for event: >> %s <<"%descriptor)
-                    print("Could not extract values for event: >> %s <<"%descriptor)
-                    failure = True
-            if failure:
-                die = 1
-                # head.append(descriptor)
-                outcomes = [('1', '**Could not parse.**')]
-            dice.append(die)
-            head.append(descriptor)
-            res.append(outcomes)
-            #result = roll(outcomes)
-            # print("{}    \n  (d{} -> {}) {}\n\n".format(descriptor.strip(), die, result[0], result[1]))
-        i += 1
-    return gen(head, dice, res)
-
-def determine_and_resolve_subroll(out):
-    top = re.search('[dD](\d+)', out)
-    if not top:
-        return ""
-    try:
-        die = int(top.group(1))
-        subtable = out[top.end():]
-        #print("> > > Subtable identified in output:", out)
-        #print("> > > Rolling a d{}, end of stuff: {}".format(die, subtable))
-        slices = []
-        for subroll in range(1, die):
-            this_regex = "({})(.*?){}".format(subroll, subroll + 1)
-            #print("> > > Attempting to match this regex:\n> {}\n> > against this\n> {}\n".format(this_regex, subtable))
-            slices.append(re.search(this_regex, subtable))
-            #print("> > > Examining piece %s..."%subtable)
-            #if slices[-1]:
-            #    print("Slice: %s"%subtable[slices[-1].start(): slices[-1].end()])
-            #else:
-            #    print("Regex failed.")
-            if not slices[-1]:
-                raise RuntimeError("Expected inline subtable, but could not parse it.")
-            subtable = subtable[slices[-1].end()-len(str(subroll+1)):]
-        # Did 1 through die-1.  Catch the end now
-        subroll = subroll + 1
-        #print("Looking for last space, item %s..."%subroll)
-        slices.append(re.search("({})(.*)".format(subroll), subtable))
-        suboutcome = roll(die)
-        sub_re = slices[suboutcome-1]
-        #print(slices)
-        ret = "    \n(Inner table roll, d{} -> {}:) {}".format(die,
-                                                               sub_re.group(1).strip(_trash),
-                                                               sub_re.group(2).strip(_trash))
-    except Exception as e:
-        log("Could not resolve inline subtable; test to parse: {}".format(out))
-        log("Error as follows: {}".format(e))
-        print("Runtime error:", e)
-        ret = "    \n>>> I'm having trouble resolving an inline subtable."
-    return ret
-
-def roll(i):
-    return random.randint(1, i)
 
 def test():
     r = sign_in()
@@ -517,14 +355,13 @@ class Core:
     pass
 
 def log(s):
-    global _log
-    if not _log:
-        if debug:
-            return
-        raise RuntimeError("Could not open log file.")
+    if debug:
+        return
+    _log = open(_log_filename, 'a')
     _log.write("{} ; {}\n".format(time.ctime(), s))
     _log.flush()
-
+    _log.close()
+    
 ####################
 
 debug = ("y" in input("Enable debugging?  ").lower() )
