@@ -18,7 +18,7 @@ def fdate():
 ##################
 # Some constants #
 ##################
-_version="1.1.0"
+_version="1.1.1"
 _last_updated="2015-11-17"
 
 _trash = string.punctuation + string.whitespace
@@ -154,6 +154,7 @@ class Request:
         
     def roll(self):
         instance = [TS.roll() for TS in self.tables_sources]
+        instance = [x for x in instance if x]
         return "\n\n-----\n\n".join(instance)
         
     def reply(self, reply_text):
@@ -197,10 +198,13 @@ class TableSource:
 
     def roll(self):
         instance = [T.roll() for T in self.tables]
-        ret = "From {}...\n\n".format(self.desc)
-        for item in instance:
-            ret += item.unpack()
-        return ret
+        instance = [x for x in instance if x]
+        if instance:
+            ret = "From {}...\n\n".format(self.desc)
+            for item in instance:
+                ret += item.unpack()
+            return ret
+        return None
 
     def has_tables(self):
         return ( 0 < len(self.tables) )
@@ -242,15 +246,19 @@ class Table:
         return "<Table with header: {}>".format(self.text.split('\n')[0])
 
     def roll(self):
-        c = random.randint(1, self.die)
-        ind = c - 1
-        R = TableRoll(d=self.die,
-                      rolled=c,
-                      head=self.header,
-                      out=self.outcomes[ind])
-        if len(self.outcomes) != self.die:
-            R.error("Expected {} items found {}".format(self.die, len(self.outcomes)))
-        return R
+        try:
+            c = random.randint(1, self.die)
+            ind = c - 1
+            R = TableRoll(d=self.die,
+                          rolled=c,
+                          head=self.header,
+                          out=self.outcomes[ind])
+            if len(self.outcomes) != self.die:
+                R.error("Expected {} items found {}".format(self.die, len(self.outcomes)))
+            return R
+        # TODO: Handle errors more gracefully.
+        except:
+            return None
 
     def parse(self):
         lines = self.text.split('\n')
@@ -259,7 +267,7 @@ class Table:
         self.die = int(head_match.group(1))
         self.header = head_match.group(2)
         self.outcomes = [ TableItem(l) for l in lines if re.search(_line_regex, l.strip(_trash)) ]
-
+ 
 class TableItem:
     '''This class allows simple handling of in-line subtables'''
     def __init__(self, text):
