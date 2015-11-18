@@ -18,8 +18,8 @@ def fdate():
 ##################
 # Some constants #
 ##################
-_version="1.1.1"
-_last_updated="2015-11-17"
+_version="1.1.2"
+_last_updated="2015-11-18"
 
 _trash = string.punctuation + string.whitespace
 
@@ -169,11 +169,17 @@ class Request:
             f.write("Time    :  {}\n".format(fdate() ))
             f.write("Author  :  {}\n".format(self.origin.author))
             f.write("Link    :  {}\n".format(self.origin.permalink))
-            f.write("Body    : (below)\n[Begin body]\n{}\n[End body]\n".format( get_post_text(self.origin)))
+            f.write("Type    :  {}\n".format(type(self.origin)))
+            try:
+                f.write("Body    : (below)\n[Begin body]\n{}\n[End body]\n".format( get_post_text(self.origin)))
+            except:
+                f.write("Body    : Could not resolve message body.")
             f.write("\n")
-            f.write("Submission title : {}\n".format(self.origin.submission.title))
-            # f.write("Submission body  : (below)\n[Begin selftext]\n{}\n[End selftext]\n".format(self.origin.submission.selftext))
-            
+            try:
+                f.write("Submission title : {}\n".format(self.origin.submission.title))
+                f.write("Submission body  : (below)\n[Begin selftext]\n{}\n[End selftext]\n".format(self.origin.submission.selftext))
+            except:
+                f.write("Submission: Could not resolve submission.")
         filename = filename.rstrip("log") + "pickle"
         with open(filename, 'wb') as f:
             pickle.dump(self, f)
