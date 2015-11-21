@@ -23,7 +23,7 @@ _last_updated="2015-11-18"
 
 _trash = string.punctuation + string.whitespace
 
-_header_regex = "^[dD](\d+)(.*)"
+_header_regex = "^(\d+)?[dD](\d+)(.*)"
 _line_regex = "^\d+\s*(.*)"
 _summons_regex = "u/roll_one_for_me"
 
@@ -279,8 +279,8 @@ class Table:
         lines = self.text.split('\n')
         head = lines.pop(0)
         head_match = re.search(_header_regex, head.strip(_trash))
-        self.die = int(head_match.group(1))
-        self.header = head_match.group(2)
+        self.die = int(head_match.group(2))
+        self.header = head_match.group(3)
         self.outcomes = [ TableItem(l) for l in lines if re.search(_line_regex, l.strip(_trash)) ]
  
 class TableItem:
