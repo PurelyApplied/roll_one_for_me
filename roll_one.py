@@ -59,12 +59,21 @@ def main(debug=False):
                 for item in to_process:
                     if item.is_summons():
                         reply_text = item.roll()
+                        okay = True
+                        if not reply_text:
+                            reply_text = "I'm sorry, but I can't find anything that I know how to parse.\n\n"
+                            okay = False
                         reply_text += BeepBoop()
                         item.reply(reply_text)
-                        log("Successfully resolving request: /u/{} @ {}.".format(item.origin.author,
-                                                                                 item.origin.permalink))
+                        if okay:
+                            log("Successfully resolving request: /u/{} @ {}.".format(item.origin.author,
+                                                                                     item.origin.permalink))
+                        else:
+                            log("Questionably resolving request: /u/{} @ {}.".format(item.origin.author,
+                                                                                     item.origin.permalink))
+                            item.log()
                     else:
-                        log("Mail is not summons.  Logging item.")
+                        log("Mail is not summons or error.  Logging item.")
                         item.log()
                     item.origin.mark_as_read()
                     trivial_passes_count = 0
