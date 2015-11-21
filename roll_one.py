@@ -18,8 +18,8 @@ def fdate():
 ##################
 # Some constants #
 ##################
-_version="1.1.2"
-_last_updated="2015-11-18"
+_version="1.1.3"
+_last_updated="2015-11-20"
 
 _trash = string.punctuation + string.whitespace
 
