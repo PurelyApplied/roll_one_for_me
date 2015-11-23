@@ -18,8 +18,8 @@ def fdate():
 ##################
 # Some constants #
 ##################
-_version="1.1.3"
-_last_updated="2015-11-20"
+_version="1.2.0"
+_last_updated="2015-11-23"
 
 _trash = string.punctuation + string.whitespace
 
@@ -46,46 +46,87 @@ def main(debug=False):
     if not os.path.exists(_log_dir) or not os.path.isdir(_log_dir):
         log("Creating log directory.")
         os.system('mkdir ./logs')
+    seen_by_sentinel = []
     while True:
         try:
             log("Signing into Reddit.")
             r = sign_in()
             trivial_passes_count = _trivial_passes_per_heartbeat - 1
             while True:
-                # log("Fetching unread mail.")
-                my_mail = list(r.get_unread(unset_has_mail=False))
-                to_process = [Request(x, r) for x in my_mail]
-                # log("{} items found to process.".format(len(to_process)))
-                for item in to_process:
-                    if item.is_summons():
-                        reply_text = item.roll()
-                        okay = True
-                        if not reply_text:
-                            reply_text = "I'm sorry, but I can't find anything that I know how to parse.\n\n"
-                            okay = False
-                        reply_text += BeepBoop()
-                        item.reply(reply_text)
-                        if okay:
-                            log("Successfully resolving request: /u/{} @ {}.".format(item.origin.author,
-                                                                                     item.origin.permalink))
-                        else:
-                            log("Questionably resolving request: /u/{} @ {}.".format(item.origin.author,
-                                                                                     item.origin.permalink))
-                            item.log()
-                    else:
-                        log("Mail is not summons or error.  Logging item.")
-                        item.log()
-                    item.origin.mark_as_read()
-                    trivial_passes_count = 0
-                trivial_passes_count += 1 if len(to_process) == 0 else 0
+                was_mail = process_mail(r)
+                was_sub = scan_submissions(seen_by_sentinel, r)
+                trivial_passes_count += 1 if not was_mail and not was_sub else 0
                 if trivial_passes_count == _trivial_passes_per_heartbeat:
                     log("Heartbeat.  {} passes without incident (or first pass).".format(_trivial_passes_per_heartbeat))
                     trivial_passes_count = 0
                 time.sleep(_sleep_between_checks)
+                
         except Exception as e:
             log("Top level.  Executing full reset.  Error details to follow.")
             log("Error: {}".format(e))
             time.sleep(_sleep_on_error)
+
+_seen_max_len = 50
+# Returns true if anything happened
+def scan_submissions(seen, r):
+    '''This function groups the following:
+    * Get the newest submissions to /r/DnDBehindTheStreen
+    * Attempt to parse the item as containing tables
+    * If tables are detected, post a top-level comment requesting that table rolls be performed there for readability
+    # * Update list of seen tables
+    # * Prune seen tables list if large.
+    '''
+
+    keep_it_tidy_reply = ("It looks like this post has some tables that I might be able to parse.  " +
+                          "To keep things tidy and not detract from actual discussion of these tables, please make your /u/roll_one_for_me requests as children to this comment." +
+                          BeepBoop() )
+    BtS = r.get_subreddit('DnDBehindTheScreen')
+    new_subs = BtS.get_new()
+    saw_something_said_something = False
+    for item in new_subs:
+        TS = TableSource(item, "scan")
+        if TS.tables:
+            top_level_authors = [com.author for com in TS.source.comments]
+            # Check if I have already replied
+            if not TS.source in seen:
+                seen.append(TS.source)
+                if not r.user in top_level_authors:
+                    item.add_comment(keep_it_tidy_reply)
+                    log("Adding organizational comment to thread with title: {}".format(TS.source.title))
+                    saw_something_said_something = True
+                
+    # Prune list to max size
+    seen[:] = seen[-_seen_max_len:]
+    return saw_something_said_something
+
+# returns True if anything processed
+def process_mail(r):
+    # log("Fetching unread mail.")
+    my_mail = list(r.get_unread(unset_has_mail=False))
+    to_process = [Request(x, r) for x in my_mail]
+    # log("{} items found to process.".format(len(to_process)))
+    for item in to_process:
+        if item.is_summons():
+            reply_text = item.roll()
+            okay = True
+            if not reply_text:
+                reply_text = "I'm sorry, but I can't find anything that I know how to parse.\n\n"
+                okay = False
+            reply_text += BeepBoop()
+            item.reply(reply_text)
+            if okay:
+                log("Successfully resolving request: /u/{} @ {}.".format(item.origin.author,
+                                                                         item.origin.permalink))
+            else:
+                log("Questionably resolving request: /u/{} @ {}.".format(item.origin.author,
+                                                                         item.origin.permalink))
+                item.log()
+        else:
+            log("Mail is not summons or error.  Logging item.")
+            item.log()
+        item.origin.mark_as_read()
+
+    return ( 0 < len(to_process))
 
 def BeepBoop():
     s = "\n\n-----\n\n"
