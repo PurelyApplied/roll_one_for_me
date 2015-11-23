@@ -67,6 +67,7 @@ def main(debug=False):
             time.sleep(_sleep_on_error)
 
 _seen_max_len = 50
+_fetch_limit=25
 # Returns true if anything happened
 def scan_submissions(seen, r):
     '''This function groups the following:
@@ -81,7 +82,7 @@ def scan_submissions(seen, r):
                           "To keep things tidy and not detract from actual discussion of these tables, please make your /u/roll_one_for_me requests as children to this comment." +
                           BeepBoop() )
     BtS = r.get_subreddit('DnDBehindTheScreen')
-    new_subs = BtS.get_new()
+    new_subs = BtS.get_new(_fetch_limit)
     saw_something_said_something = False
     for item in new_subs:
         TS = TableSource(item, "scan")
