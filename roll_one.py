@@ -82,7 +82,7 @@ def scan_submissions(seen, r):
                           "To keep things tidy and not detract from actual discussion of these tables, please make your /u/roll_one_for_me requests as children to this comment." +
                           BeepBoop() )
     BtS = r.get_subreddit('DnDBehindTheScreen')
-    new_subs = BtS.get_new(_fetch_limit)
+    new_subs = BtS.get_new(limit=_fetch_limit)
     saw_something_said_something = False
     for item in new_subs:
         TS = TableSource(item, "scan")
