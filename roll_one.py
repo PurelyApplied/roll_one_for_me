@@ -24,7 +24,7 @@ _last_updated="2015-11-23"
 _trash = string.punctuation + string.whitespace
 
 _header_regex = "^(\d+)?[dD](\d+)(.*)"
-_line_regex = "^\d+\s*(.*)"
+_line_regex = "^(\d+)(\s*-+\s*\d+)?(.*)"
 _summons_regex = "u/roll_one_for_me"
 
 _mentions_attempts = 10
@@ -77,28 +77,31 @@ def scan_submissions(seen, r):
     # * Update list of seen tables
     # * Prune seen tables list if large.
     '''
+    try:
+        keep_it_tidy_reply = ("It looks like this post has some tables that I might be able to parse.  " +
+                              "To keep things tidy and not detract from actual discussion of these tables, please make your /u/roll_one_for_me requests as children to this comment." +
+                              BeepBoop() )
+        BtS = r.get_subreddit('DnDBehindTheScreen')
+        new_subs = BtS.get_new(limit=_fetch_limit)
+        saw_something_said_something = False
+        for item in new_subs:
+            TS = TableSource(item, "scan")
+            if TS.tables:
+                top_level_authors = [com.author for com in TS.source.comments]
+                # Check if I have already replied
+                if not TS.source in seen:
+                    seen.append(TS.source)
+                    if not r.user in top_level_authors:
+                        item.add_comment(keep_it_tidy_reply)
+                        log("Adding organizational comment to thread with title: {}".format(TS.source.title))
+                        saw_something_said_something = True
 
-    keep_it_tidy_reply = ("It looks like this post has some tables that I might be able to parse.  " +
-                          "To keep things tidy and not detract from actual discussion of these tables, please make your /u/roll_one_for_me requests as children to this comment." +
-                          BeepBoop() )
-    BtS = r.get_subreddit('DnDBehindTheScreen')
-    new_subs = BtS.get_new(limit=_fetch_limit)
-    saw_something_said_something = False
-    for item in new_subs:
-        TS = TableSource(item, "scan")
-        if TS.tables:
-            top_level_authors = [com.author for com in TS.source.comments]
-            # Check if I have already replied
-            if not TS.source in seen:
-                seen.append(TS.source)
-                if not r.user in top_level_authors:
-                    item.add_comment(keep_it_tidy_reply)
-                    log("Adding organizational comment to thread with title: {}".format(TS.source.title))
-                    saw_something_said_something = True
-                
-    # Prune list to max size
-    seen[:] = seen[-_seen_max_len:]
-    return saw_something_said_something
+        # Prune list to max size
+        seen[:] = seen[-_seen_max_len:]
+        return saw_something_said_something
+    except Exception as e:
+        log("Error during submissions scan: {}".format(e))
+        return False
 
 # returns True if anything processed
 def process_mail(r):
@@ -304,8 +307,18 @@ class Table:
 
     def roll(self):
         try:
+            weights = [ i.weight for i in self.outcomes]
+            total_weight = sum(weights)
+            assert self.die == total_weight, "Table roll error: parsed die did not match sum of item wieghts."
+            stops = [ sum(weights[:i+1]) for i in range(len(weights))]
             c = random.randint(1, self.die)
-            ind = c - 1
+            scan = c
+            ind = -1
+            while scan > 0:
+                ind += 1
+                print("Scanning: scan = {}; this weight = {}; index = {}".format(scan, weights[ind], ind))
+                scan -= weights[ind]
+                
             R = TableRoll(d=self.die,
                           rolled=c,
                           head=self.header,
@@ -314,7 +327,8 @@ class Table:
                 R.error("Expected {} items found {}".format(self.die, len(self.outcomes)))
             return R
         # TODO: Handle errors more gracefully.
-        except:
+        except Exception as e:
+            print("Exception in Table roll:", e)
             return None
 
     def parse(self):
@@ -331,6 +345,7 @@ class TableItem:
         self.text = text
         self.inline_table = None
         self.outcome = ""
+        self.weight = 0
 
         self.parse()
 
@@ -341,12 +356,26 @@ class TableItem:
         main_regex = re.search(_line_regex, self.text.strip(_trash))
         if not main_regex:
             return
-        self.outcome = main_regex.group(1)
+        # Grab outcome
+        self.outcome = main_regex.group(3).strip(_trash)
+        # Get weight / ranges
+        if not main_regex.group(2):
+            self.weight = 1
+        else:
+            try:
+                start = int(main_regex.group(1).strip(_trash))
+                stop = int(main_regex.group(2).strip(_trash))
+                self.weight = stop - start + 1
+            except:
+                self.weight = 1
+        # Identify if there is a subtable
         if re.search("[dD]\d+", self.outcome):
             die_regex = re.search("[dD]\d+", self.outcome)
             self.inline_table = InlineTable(self.outcome[die_regex.start():])
             self.outcome = self.outcome[:die_regex.start()].strip(_trash)
+        # this might be redundant
         self.outcome = self.outcome.strip(_trash)
+
 
     def get(self):
         if self.inline_table:
