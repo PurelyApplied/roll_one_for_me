@@ -316,7 +316,7 @@ class Table:
             ind = -1
             while scan > 0:
                 ind += 1
-                print("Scanning: scan = {}; this weight = {}; index = {}".format(scan, weights[ind], ind))
+                #print("Scanning: scan = {}; this weight = {}; index = {}".format(scan, weights[ind], ind))
                 scan -= weights[ind]
                 
             R = TableRoll(d=self.die,
@@ -328,7 +328,7 @@ class Table:
             return R
         # TODO: Handle errors more gracefully.
         except Exception as e:
-            print("Exception in Table roll:", e)
+            log("Exception in Table roll: {}".format(e))
             return None
 
     def parse(self):
@@ -436,7 +436,7 @@ class TableRoll:
         ret += "(d{} -> {}) {}.    \n".format(self.d, self.rolled, self.out.outcome)
         if self.sub:
             #ret += str(self.sub.outcome)
-            print("type=", type(self.sub))
+            # print("type=", type(self.sub))
             ret += "(Subtable d{} -> {}) *Inline table parsing temporarily disabled.*".format(self.sub.die, random.randint(1, self.sub.die))
         ret += "\n\n"
         return ret
