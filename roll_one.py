@@ -328,7 +328,7 @@ class Table:
             return R
         # TODO: Handle errors more gracefully.
         except Exception as e:
-            log("Exception in Table roll: {}".format(e))
+            log("Exception in Table roll ({}): {}".format(self, e))
             return None
 
     def parse(self):
