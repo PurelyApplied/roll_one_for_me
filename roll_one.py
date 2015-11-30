@@ -402,7 +402,10 @@ class InlineTable:
         #slices = []
         # TODO
         for subroll in range(1, self.die):
-            self.outcomes.append(TableItem("Subtable rolling temporarily disabled."))
+            TI = TableItem("Subtable rolling temporarily disabled.")
+            TI.weight=1
+            self.outcomes.append(TI)
+
 
     def roll(self):
         cast = random.randint(1, self.die)
