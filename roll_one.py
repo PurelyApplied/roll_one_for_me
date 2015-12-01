@@ -181,8 +181,7 @@ class Request:
         self.reddit = r
         self.tables_sources = []
         self.outcome = None
-        self.instance = None
-
+        
         self.parse()
 
     def text(self):
@@ -297,7 +296,6 @@ class Table:
         self.die = None
         self.header = ""
         self.outcomes = []
-        self.instance = None
         self.is_inline = False
 
         self.parse()
@@ -341,13 +339,18 @@ class Table:
  
 class TableItem:
     '''This class allows simple handling of in-line subtables'''
-    def __init__(self, text):
+    def __init__(self, text, w=0):
         self.text = text
         self.inline_table = None
         self.outcome = ""
         self.weight = 0
 
         self.parse()
+
+        # If parsing fails, particularly in inline-tables, we may
+        # explicitly set weights
+        if w:
+            self.weight = w
 
     def __repr__(self):
         return "<TableItem: {}{}>".format(self.outcome, "; has inline table" if self.inline_table else "")
@@ -383,37 +386,39 @@ class TableItem:
         else:
             return self.outcome
         
-class InlineTable:
+class InlineTable(Table):
     def __init__(self, text):
-        self.text = text
-        self.die = None
-        self.outcomes = []
-        self.header = ""
-        
-        self.parse()
+        super(InlineTable, self).__init__(text)
+        self.is_inline = True
 
     def __repr__(self):
         return "<d{} Inline table>".format(self.die)
 
     def parse(self):
-        top = re.search("[dD](\d+)", self.text)
+        top = re.search("[dD](\d+)(.*)", self.text)
         self.die = int(top.group(1))
-        #subtable = self.text[top.end():]
-        #slices = []
-        # TODO
-        for subroll in range(1, self.die):
-            TI = TableItem("Subtable rolling temporarily disabled.")
-            TI.weight=1
-            self.outcomes.append(TI)
+        tail = top.group(2)
+        sub_outs = []
+        while tail:
+            print("tail =", tail)
+            in_match = re.search(_line_regex, tail.strip(_trash))
+            print("in_match: g1 // {} // g2 // {} // g3 // {} //".format(
+                in_match.group(1), in_match.group(2), in_match.group(3) )) 
+            this_out = in_match.group(3)
+            print("this_out =", this_out)
+            # _line_regex[1:] drops line-start anchor
+            next_match = re.search(_line_regex[1:], this_out)
+            if next_match:
+                print("next_match: g1 // {} // g2 // {} // g3 // {} //".format(
+                    next_match.group(1), next_match.group(2), next_match.group(3) )) 
+                tail = this_out[next_match.start():]
+                this_out = this_out[:next_match.start()]
+                print("Updating tail =", tail,"; this_out =", this_out)
+            else:
+                tail = ""
 
-
-    def roll(self):
-        cast = random.randint(1, self.die)
-        ind = cast - 1
-        R = TableRoll(self.die, cast, "", self.outcomes[ind])
-        if len(self.outcomes) != self.die:
-            R.error("Inline table expected {} items found {}".format(self.die, len(self.outcomes)))
-        return R
+            TI_text = in_match.group(1) + (in_match.group(2) if in_match.group(2) else "") + this_out
+            self.outcomes.append(TableItem(TI_text))
 
 class TableRoll:
     def __init__(self, d, rolled, head, out, err=None):
@@ -422,7 +427,6 @@ class TableRoll:
         self.head = head
         self.out = out
         self.sub = out.inline_table
-        self.sub_out = None
         self.err = err
 
         if self.sub:
@@ -438,9 +442,7 @@ class TableRoll:
         ret  = "{}...    \n".format(self.head.strip(_trash))
         ret += "(d{} -> {}) {}.    \n".format(self.d, self.rolled, self.out.outcome)
         if self.sub:
-            #ret += str(self.sub.outcome)
-            # print("type=", type(self.sub))
-            ret += "(Subtable d{} -> {}) *Inline table parsing temporarily disabled.*".format(self.sub.die, random.randint(1, self.sub.die))
+            ret += "Subtable: {}".format(self.sub.roll().unpack())
         ret += "\n\n"
         return ret
 
@@ -461,7 +463,10 @@ def log(s):
     
 ####################
 
+T = "This has a d12 1 one 2 two 3 thr 4 fou 5-6 fiv/six 7 sev 8 eig 9 nin 10 ten 11 ele 12 twe"
+T = "This has a d12 1 one 2 two 3 thr 4 fou 5-6 fiv/six 7 sev 8 eig 9 nin 10 ten 11 ele 12 twe"
 debug = ("y" in input("Enable debugging?  ").lower() )
 if __name__=="__main__":
     if 'y' in input("Run main?  ").lower():
         main()
+
