@@ -53,6 +53,4 @@ Generates an instance of a random table in a Reddit submission.
 
 * If fewer than the expected number of items exist in a table, you'll get a silly line of "(d1 -> 1:) Could not parse" instead of a meaningful error message.
 
-* Full parsing of inline tables is currently disabled, but it should still give you a roll to use.  This might not be true in all cases.
-
 * A header of <n>d<k> will be parsed as 1d<k> for the time being.
