@@ -18,8 +18,8 @@ def fdate():
 ##################
 # Some constants #
 ##################
-_version="1.2.1"
-_last_updated="2015-12-01"
+_version="1.2.2"
+_last_updated="2015-12-02"
 
 _trash = string.punctuation + string.whitespace
 
@@ -333,8 +333,9 @@ class Table:
         lines = self.text.split('\n')
         head = lines.pop(0)
         head_match = re.search(_header_regex, head.strip(_trash))
-        self.die = int(head_match.group(2))
-        self.header = head_match.group(3)
+        if head_match:
+            self.die = int(head_match.group(2))
+            self.header = head_match.group(3)
         self.outcomes = [ TableItem(l) for l in lines if re.search(_line_regex, l.strip(_trash)) ]
  
 class TableItem:
@@ -388,7 +389,7 @@ class TableItem:
         
 class InlineTable(Table):
     def __init__(self, text):
-        super(InlineTable, self).__init__(text)
+        super().__init__(text)
         self.is_inline = True
 
     def __repr__(self):
@@ -396,29 +397,37 @@ class InlineTable(Table):
 
     def parse(self):
         top = re.search("[dD](\d+)(.*)", self.text)
+        if not top:
+            return
+        
         self.die = int(top.group(1))
         tail = top.group(2)
         sub_outs = []
         while tail:
-            print("tail =", tail)
+            #print("tail =", tail)
             in_match = re.search(_line_regex, tail.strip(_trash))
-            print("in_match: g1 // {} // g2 // {} // g3 // {} //".format(
-                in_match.group(1), in_match.group(2), in_match.group(3) )) 
+            if not in_match:
+                raise RuntimeError("Could not complete parsing InlineTable; in_match did not catch.")
+            #print("in_match: g1 // {} // g2 // {} // g3 // {} //".format(
+            # in_match.group(1), in_match.group(2), in_match.group(3) )) 
             this_out = in_match.group(3)
-            print("this_out =", this_out)
+            #print("this_out =", this_out)
             # _line_regex[1:] drops line-start anchor
             next_match = re.search(_line_regex[1:], this_out)
             if next_match:
-                print("next_match: g1 // {} // g2 // {} // g3 // {} //".format(
-                    next_match.group(1), next_match.group(2), next_match.group(3) )) 
+                #print("next_match: g1 // {} // g2 // {} // g3 // {} //".format(
+                # next_match.group(1), next_match.group(2), next_match.group(3) )) 
                 tail = this_out[next_match.start():]
                 this_out = this_out[:next_match.start()]
-                print("Updating tail =", tail,"; this_out =", this_out)
+                #print("Updating tail =", tail,"; this_out =", this_out)
             else:
                 tail = ""
 
             TI_text = in_match.group(1) + (in_match.group(2) if in_match.group(2) else "") + this_out
-            self.outcomes.append(TableItem(TI_text))
+            try:
+                self.outcomes.append(TableItem(TI_text))
+            except Exception as e:
+                log("Error building TableItem in inline table; item skipped.")
 
 class TableRoll:
     def __init__(self, d, rolled, head, out, err=None):
