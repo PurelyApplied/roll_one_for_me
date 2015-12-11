@@ -6,12 +6,12 @@ def main():
         full_name = './logs/'+name
         print("read_logs.py> View log {}?".format(name))
         yn = input("read_logs.py (y/n)> ")
-        if y == yn:
+        if 'y' == yn:
             print(open(full_name, 'r').read())
             
         print("read_logs.py> Delete log and pickle associated to {}?".format(name))
         yn = input("read_logs.py (y/n)> ")
-        if y == yn:
+        if 'y' == yn:
             print("os.system('rm '+fullname)")
             print("os.system('rm '+fullname[:-4]+'.pickle')")
             #os.system('rm '+fullname)
