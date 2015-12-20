@@ -149,11 +149,14 @@ def sign_in():
     r.login(disable_warning=True)
     return r
 
-def test():
+def test(mens=True):
     r = sign_in()
     # already, ignore = pickle.load(open(_pickle_filename, 'rb'))
     my_mail = list(r.get_unread(unset_has_mail=False))
-    mentions = list(r.get_mentions())
+    if mens:
+        mentions = list(r.get_mentions())
+    else:
+        mentions = None
     return r, my_mail, mentions
 
 def get_post_text(post):
@@ -375,7 +378,12 @@ class TableItem:
         # Identify if there is a subtable
         if re.search("[dD]\d+", self.outcome):
             die_regex = re.search("[dD]\d+", self.outcome)
-            self.inline_table = InlineTable(self.outcome[die_regex.start():])
+            try:
+                self.inline_table = InlineTable(self.outcome[die_regex.start():])
+            except RuntimeError as e:
+                log("Error in inline_table parsing ; table item full text:")
+                log(self.text)
+                log(e)
             self.outcome = self.outcome[:die_regex.start()].strip(_trash)
         # this might be redundant
         self.outcome = self.outcome.strip(_trash)
