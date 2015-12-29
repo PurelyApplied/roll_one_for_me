@@ -472,6 +472,7 @@ class Core:
 
 def log(s):
     if debug:
+        print("LOG>", s)
         return
     _log = open(_log_filename, 'a')
     _log.write("{} ; {}\n".format(time.ctime(), s))
