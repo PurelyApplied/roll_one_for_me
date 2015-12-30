@@ -291,6 +291,34 @@ class TableSource:
 
         self.tables = [ Table(t) for t in table_text ]
 
+class TableSourceFromText(TableSource):
+    def __init__(self, text, descriptor):
+        self.text = text
+        self.desc = descriptor
+        self.tables = []
+
+        self.parse()
+        
+    def parse(self):
+        indices = []
+        last_index = 0
+        text = self.text
+        lines = text.split("\n")
+        for line_num in range(len(lines)):
+            l = lines[line_num]
+            if re.search(_header_regex, l.strip(_trash)):
+                indices.append(line_num)
+        # TODO: if no headers found
+        if len(indices) == 0:
+            return None
+        
+        table_text = []
+        for i in range(len(indices) -1):
+            table_text.append("\n".join(lines[ indices[i]:indices[i+1] ]))
+        table_text.append("\n".join(lines[ indices[-1]: ]))
+
+        self.tables = [ Table(t) for t in table_text ]
+
 class Table:
     '''Container for a single set of TableItem objects
     A single post will likely contain many Table objects'''
@@ -310,6 +338,9 @@ class Table:
         try:
             weights = [ i.weight for i in self.outcomes]
             total_weight = sum(weights)
+            if debug:
+                print("Weights ; Outcome")
+                pprint(list(zip(self.weights, self.outcomes)))
             assert self.die == total_weight, "Table roll error: parsed die did not match sum of item wieghts."
             stops = [ sum(weights[:i+1]) for i in range(len(weights))]
             c = random.randint(1, self.die)
