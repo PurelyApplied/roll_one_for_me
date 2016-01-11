@@ -1,0 +1,50 @@
+{
+
+
+
+
+
+
+    "creator": "Patrick S Rhomberg <patrick-rhomberg@uiowa.edu>", 
+
+
+
+
+
+
+    "reporter": "Patrick S Rhomberg <patrick-rhomberg@uiowa.edu>", 
+
+
+
+
+
+
+    "severity": "minor", 
+
+
+
+
+
+
+    "status": "open", 
+
+
+
+
+
+
+    "summary": "Logger should be separated into its own file, perhaps?  Cross-dependencies on both roll_one.py and roll_one_classes.py", 
+
+
+
+
+
+
+    "time": "Mon, 11 Jan 2016 21:04:29 +0000"
+
+
+
+
+
+
+}

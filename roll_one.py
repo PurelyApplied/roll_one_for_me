@@ -6,9 +6,6 @@
 from roll_one_classes import * # Also includes logger
 import time, praw, os
 
-def fdate():
-    return "-".join(str(x) for x in time.gmtime()[:6])
-
 ##################
 # Some constants #
 ##################
@@ -45,7 +42,8 @@ def main(debug=False):
                 was_sub = scan_submissions(seen_by_sentinel, r)
                 trivial_passes_count += 1 if not was_mail and not was_sub else 0
                 if trivial_passes_count == _trivial_passes_per_heartbeat:
-                    logger("Heartbeat.  {} passes without incident (or first pass).".format(_trivial_passes_per_heartbeat), _log_filename, debug)
+                    logger("Heartbeat.  {} passes without incident (or first pass).".format(_trivial_passes_per_heartbeat),
+                           _log_filename, debug)
                     trivial_passes_count = 0
                 time.sleep(_sleep_between_checks)
                 
@@ -103,11 +101,13 @@ def process_mail(r):
             reply_text += BeepBoop()
             item.reply(reply_text)
             if okay:
-                logger("Successfully resolving request: /u/{} @ {}.".format(item.origin.author, _log_filename, debug)
-                       item.origin.permalink))
+                logger("Successfully resolving request: /u/{} @ {}.".format(item.origin.author,
+                                                                            item.origin.permalink),
+                       _log_filename, debug)
             else:
-                logger("Questionably resolving request: /u/{} @ {}.".format(item.origin.author, _log_filename, debug)
-                       item.origin.permalink))
+                logger("Questionably resolving request: /u/{} @ {}.".format(item.origin.author,
+                                                                            item.origin.permalink),
+                        _log_filename, debug)
                 item.log(_log_dir)
         else:
             logger("Mail is not summons or error.  Logging item.", _log_filename, debug)
@@ -152,5 +152,5 @@ def test(mens=True):
 debug = ("y" in input("Enable debugging?  ").lower() )
 if __name__=="__main__":
     if 'y' in input("Run main?  ").lower():
-        main()
+        main(debug)
 

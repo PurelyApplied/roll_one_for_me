@@ -63,13 +63,16 @@ These are then built into TableRoll objects for reporting.
 # roll_one_classes.py:329:    def error(self, e):
 # roll_one_classes.py:332:    def unpack(self):
 
-import random, praw, re, pickle, string
+import random, praw, re, pickle, string, time
 from pprint import pprint  #for debugging / live testing
 
 _trash = string.punctuation + string.whitespace
 _header_regex = "^(\d+)?[dD](\d+)(.*)"
 _line_regex = "^(\d+)(\s*-+\s*\d+)?(.*)"
 _summons_regex = "u/roll_one_for_me"
+
+def fdate():
+    return "-".join(str(x) for x in time.gmtime()[:6])
 
 def logger(log_str, filename, dbg=False):
     '''logger(log_str, filename, debug=False)
@@ -78,8 +81,9 @@ def logger(log_str, filename, dbg=False):
     if dbg:
         print("LOG>", log_str)
         return
-    open(filename, 'a').write("{} ; {}\n".format(time.ctime(), log_str))
-
+    f = open(filename, 'a')
+    f.write("{} ; {}\n".format(time.ctime(), log_str))
+    f.close()
 
 class Request:
     def __init__(self, praw_ref, r):
