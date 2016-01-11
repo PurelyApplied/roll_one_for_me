@@ -66,6 +66,11 @@ These are then built into TableRoll objects for reporting.
 import random, praw, re, pickle
 from pprint import pprint  #for debugging / live testing
 
+_trash = string.punctuation + string.whitespace
+_header_regex = "^(\d+)?[dD](\d+)(.*)"
+_line_regex = "^(\d+)(\s*-+\s*\d+)?(.*)"
+_summons_regex = "u/roll_one_for_me"
+
 class Request:
     def __init__(self, praw_ref, r):
         self.origin = praw_ref
@@ -105,8 +110,8 @@ class Request:
     def is_summons(self):
         return re.search(_summons_regex, get_post_text(self.origin).lower())
 
-    def log(self):
-        filename = "{}/{}-{}.log".format(_log_dir, self.origin.author, self.origin.fullname)
+    def log(self, log_dir):
+        filename = "{}/{}-{}.log".format(log_dir, self.origin.author, self.origin.fullname)
         with open(filename, 'w') as f:
             f.write("Time    :  {}\n".format(fdate() ))
             f.write("Author  :  {}\n".format(self.origin.author))

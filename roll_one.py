@@ -15,15 +15,6 @@ def fdate():
 _version="1.2.3"
 _last_updated="2016-01-11"
 
-_trash = string.punctuation + string.whitespace
-
-_header_regex = "^(\d+)?[dD](\d+)(.*)"
-_line_regex = "^(\d+)(\s*-+\s*\d+)?(.*)"
-_summons_regex = "u/roll_one_for_me"
-
-_mentions_attempts = 10
-_answer_attempts = 10
-
 _sleep_on_error = 10
 _sleep_between_checks = 60
 
@@ -119,10 +110,10 @@ def process_mail(r):
             else:
                 log("Questionably resolving request: /u/{} @ {}.".format(item.origin.author,
                                                                          item.origin.permalink))
-                item.log()
+                item.log(_log_dir)
         else:
             log("Mail is not summons or error.  Logging item.")
-            item.log()
+            item.log(_log_dir)
         item.origin.mark_as_read()
 
     return ( 0 < len(to_process))
