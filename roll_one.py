@@ -3,7 +3,7 @@
 
 # To add: Look for tables that are actual tables.
 # Look for keyword ROLL in tables and scan for arbitrary depth
-from roll_one_classes import *
+from roll_one_classes import * # Also includes logger
 import time, praw, os
 
 def fdate():
@@ -30,14 +30,14 @@ _fetch_limit=25
 def main(debug=False):
     '''main(debug=False)
     Logs into Reddit, looks for unanswered user mentions, and generates and posts replies'''
-    log("Begin main()")
+    logger("Begin main()", _log_filename, debug)
     if not os.path.exists(_log_dir) or not os.path.isdir(_log_dir):
-        log("Creating log directory.")
+        logger("Creating log directory.", _log_filename, debug)
         os.system('mkdir ./logs')
     seen_by_sentinel = []
     while True:
         try:
-            log("Signing into Reddit.")
+            logger("Signing into Reddit.", _log_filename, debug)
             r = sign_in()
             trivial_passes_count = _trivial_passes_per_heartbeat - 1
             while True:
@@ -45,13 +45,13 @@ def main(debug=False):
                 was_sub = scan_submissions(seen_by_sentinel, r)
                 trivial_passes_count += 1 if not was_mail and not was_sub else 0
                 if trivial_passes_count == _trivial_passes_per_heartbeat:
-                    log("Heartbeat.  {} passes without incident (or first pass).".format(_trivial_passes_per_heartbeat))
+                    logger("Heartbeat.  {} passes without incident (or first pass).".format(_trivial_passes_per_heartbeat), _log_filename, debug)
                     trivial_passes_count = 0
                 time.sleep(_sleep_between_checks)
                 
         except Exception as e:
-            log("Top level.  Executing full reset.  Error details to follow.")
-            log("Error: {}".format(e))
+            logger("Top level.  Executing full reset.  Error details to follow.", _log_filename, debug)
+            logger("Error: {}".format(e), _log_filename, debug)
             time.sleep(_sleep_on_error)
 
 # Returns true if anything happened
@@ -79,22 +79,20 @@ def scan_submissions(seen, r):
                     seen.append(TS.source)
                     if not r.user in top_level_authors:
                         item.add_comment(keep_it_tidy_reply)
-                        log("Adding organizational comment to thread with title: {}".format(TS.source.title))
+                        logger("Adding organizational comment to thread with title: {}".format(TS.source.title), _log_filename, debug)
                         saw_something_said_something = True
 
         # Prune list to max size
         seen[:] = seen[-_seen_max_len:]
         return saw_something_said_something
     except Exception as e:
-        log("Error during submissions scan: {}".format(e))
+        logger("Error during submissions scan: {}".format(e), _log_filename, debug)
         return False
 
 def process_mail(r):
     '''Processes notifications.  Returns True if any item was processed.'''
-    # log("Fetching unread mail.")
     my_mail = list(r.get_unread(unset_has_mail=False))
     to_process = [Request(x, r) for x in my_mail]
-    # log("{} items found to process.".format(len(to_process)))
     for item in to_process:
         if item.is_summons():
             reply_text = item.roll()
@@ -105,14 +103,14 @@ def process_mail(r):
             reply_text += BeepBoop()
             item.reply(reply_text)
             if okay:
-                log("Successfully resolving request: /u/{} @ {}.".format(item.origin.author,
-                                                                         item.origin.permalink))
+                logger("Successfully resolving request: /u/{} @ {}.".format(item.origin.author, _log_filename, debug)
+                       item.origin.permalink))
             else:
-                log("Questionably resolving request: /u/{} @ {}.".format(item.origin.author,
-                                                                         item.origin.permalink))
+                logger("Questionably resolving request: /u/{} @ {}.".format(item.origin.author, _log_filename, debug)
+                       item.origin.permalink))
                 item.log(_log_dir)
         else:
-            log("Mail is not summons or error.  Logging item.")
+            logger("Mail is not summons or error.  Logging item.", _log_filename, debug)
             item.log(_log_dir)
         item.origin.mark_as_read()
 
@@ -149,15 +147,6 @@ def test(mens=True):
         mentions = None
     return r, my_mail, mentions
 
-def log(s):
-    if debug:
-        print("LOG>", s)
-        return
-    _log = open(_log_filename, 'a')
-    _log.write("{} ; {}\n".format(time.ctime(), s))
-    _log.flush()
-    _log.close()
-    
 ####################
 
 debug = ("y" in input("Enable debugging?  ").lower() )

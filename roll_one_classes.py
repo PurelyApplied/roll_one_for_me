@@ -71,6 +71,16 @@ _header_regex = "^(\d+)?[dD](\d+)(.*)"
 _line_regex = "^(\d+)(\s*-+\s*\d+)?(.*)"
 _summons_regex = "u/roll_one_for_me"
 
+def logger(log_str, filename, dbg=False):
+    '''logger(log_str, filename, debug=False)
+    Appends "[Date and time] ; [log_str] \\n" to file with name filename
+    if debug=True, prints "LOG> [log_str]" instead.'''
+    if dbg:
+        print("LOG>", log_str)
+        return
+    open(filename, 'a').write("{} ; {}\n".format(time.ctime(), log_str))
+
+
 class Request:
     def __init__(self, praw_ref, r):
         self.origin = praw_ref
@@ -257,7 +267,7 @@ class Table:
             return R
         # TODO: Handle errors more gracefully.
         except Exception as e:
-            log("Exception in Table roll ({}): {}".format(self, e))
+            logger("Exception in Table roll ({}): {}".format(self, e))
             return None
 
  
@@ -301,10 +311,10 @@ class TableItem:
             try:
                 self.inline_table = InlineTable(self.outcome[die_regex.start():])
             except RuntimeError as e:
-                log("Error in inline_table parsing ; table item full text:")
-                log(self.text)
-                log(e)
-            self.outcome = self.outcome[:die_regex.start()].strip(_trash)
+                logger("Error in inline_table parsing ; table item full text:", _log_filename, debug)
+                logger(self.text, _log_filename, debug)
+                logger(e, _log_filename, debug)
+                self.outcome = self.outcome[:die_regex.start()].strip(_trash)
         # this might be redundant
         self.outcome = self.outcome.strip(_trash)
 
@@ -348,8 +358,8 @@ class InlineTable(Table):
             try:
                 self.outcomes.append(TableItem(TI_text))
             except Exception as e:
-                log("Error building TableItem in inline table; item skipped.")
-
+                logger("Error building TableItem in inline table; item skipped.", _log_filename, debug)
+                
 class TableRoll:
     def __init__(self, d, rolled, head, out, err=None):
         self.d = d
