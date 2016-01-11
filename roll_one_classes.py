@@ -63,7 +63,7 @@ These are then built into TableRoll objects for reporting.
 # roll_one_classes.py:329:    def error(self, e):
 # roll_one_classes.py:332:    def unpack(self):
 
-import random, praw, re, pickle
+import random, praw, re, pickle, string
 from pprint import pprint  #for debugging / live testing
 
 _trash = string.punctuation + string.whitespace

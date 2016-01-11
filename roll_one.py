@@ -4,7 +4,7 @@
 # To add: Look for tables that are actual tables.
 # Look for keyword ROLL in tables and scan for arbitrary depth
 from roll_one_classes import *
-import string, time, praw, os
+import time, praw, os
 
 def fdate():
     return "-".join(str(x) for x in time.gmtime()[:6])
