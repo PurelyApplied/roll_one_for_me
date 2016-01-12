@@ -4,6 +4,8 @@
 # To add: Look for tables that are actual tables.
 # Look for keyword ROLL in tables and scan for arbitrary depth
 from roll_one_classes import * # Also includes logger
+from roll_one_util import *
+
 import time, praw, os
 
 ##################

@@ -63,6 +63,8 @@ These are then built into TableRoll objects for reporting.
 # roll_one_classes.py:329:    def error(self, e):
 # roll_one_classes.py:332:    def unpack(self):
 
+from roll_one_util import *
+
 import random, praw, re, pickle, string, time
 from pprint import pprint  #for debugging / live testing
 
@@ -70,20 +72,6 @@ _trash = string.punctuation + string.whitespace
 _header_regex = "^(\d+)?[dD](\d+)(.*)"
 _line_regex = "^(\d+)(\s*-+\s*\d+)?(.*)"
 _summons_regex = "u/roll_one_for_me"
-
-def fdate():
-    return "-".join(str(x) for x in time.gmtime()[:6])
-
-def logger(log_str, filename, dbg=False):
-    '''logger(log_str, filename, debug=False)
-    Appends "[Date and time] ; [log_str] \\n" to file with name filename
-    if debug=True, prints "LOG> [log_str]" instead.'''
-    if dbg:
-        print("LOG>", log_str)
-        return
-    f = open(filename, 'a')
-    f.write("{} ; {}\n".format(time.ctime(), log_str))
-    f.close()
 
 class Request:
     def __init__(self, praw_ref, r):
@@ -271,7 +259,7 @@ class Table:
             return R
         # TODO: Handle errors more gracefully.
         except Exception as e:
-            logger("Exception in Table roll ({}): {}".format(self, e))
+            logger("Exception in Table roll ({}): {}".format(self, e), _log_filename, debug)
             return None
 
  
@@ -389,14 +377,3 @@ class TableRoll:
             ret += "Subtable: {}".format(self.sub.roll().unpack())
         ret += "\n\n"
         return ret
-
-# Used by both Request and TableSource ; should perhaps depricate this
-# and give each class its own method
-def get_post_text(post):
-    '''Returns text to parse from either Comment or Submission'''
-    if type(post) == praw.objects.Comment:
-        return post.body
-    elif type(post) == praw.objects.Submission:
-        return post.selftext
-    else:
-        raise RuntimeError("Attempt to get post text from non-Comment / non-Submission post.")
