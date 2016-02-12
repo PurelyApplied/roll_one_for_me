@@ -109,9 +109,9 @@ def BeepBoop():
     '''Builds and returns reply footer "Beep Boop I'm a bot..."'''
     s = "\n\n-----\n\n"
     s += ("*Beep boop I'm a bot.  " +
-          "You can find details about me at " +
-          "[this](https://www.reddit.com/r/DnDBehindTheScreen/comments/3rryc9/introducing_a_new_bot_uroll_one_for_me_for_all/) post.  " +
-          "If it looks like I've gone off the rails and might be summoning SkyNet, let /u/PurelyApplied know, even though he sees all of these because of the mentions anyway.*" )
+          "You can find usage and known issue details about me at, as well as my source code, on my " +
+          "[GitHub](https://github.com/PurelyApplied/roll_one_for_me) page.  " +
+          "I am maintained by /u/PurelyApplied.*" )
     s += "\n\n^(v{}; code base last updated {})".format(_version, _last_updated)
     return s
 
