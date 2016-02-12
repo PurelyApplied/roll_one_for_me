@@ -1,20 +1,4 @@
 '''Class definitions for the roll_one_for_me bot
-Request
-    __init__(self, praw_reference, reddit_handle)
-TableSource
-    __init__(self, praw_reference, text_descriptor)
-TableSourceFromText(TableSource)
-    __init__(self, raw_text, text_descriptor)
-    This class used for debugging purposes
-Table
-    __init__(self, text)
-TableItem
-    __init__(self, text, item_weight)
-    If item weight evaluates to False in bool context, weight is inferred
-InlineTable(Table)
-    __init__(self, text)
-TableRoll
-    __init__(self, die_size, rolled_value, header_description, text_output, roll_error=None)
 
 A Request fetches the submission and top-level comments of the appropraite thread.
 Each of these items become a TableSource.
@@ -24,54 +8,10 @@ When a Table is rolled, the appropraite TableItems are identified.
 These are then built into TableRoll objects for reporting.
 '''
 
-# roll_one_classes.py:30:class Request:
-# roll_one_classes.py:31:    def __init__(self, praw_ref, r):
-# roll_one_classes.py:39:    def __repr__(self):
-# roll_one_classes.py:42:    def _parse(self):
-# roll_one_classes.py:54:    def roll(self):
-# roll_one_classes.py:59:    def reply(self, reply_text):
-# roll_one_classes.py:62:    def is_summons(self):
-# roll_one_classes.py:65:    def log(self):
-# roll_one_classes.py:87:    def describe_source(self):
-# roll_one_classes.py:90:class TableSource:
-# roll_one_classes.py:91:    def __init__(self, praw_ref, descriptor):
-# roll_one_classes.py:98:    def __repr__(self):
-# roll_one_classes.py:102:    def roll(self):
-# roll_one_classes.py:112:    def has_tables(self):
-# roll_one_classes.py:115:    def _parse(self):
-# roll_one_classes.py:135:class TableSourceFromText(TableSource):
-# roll_one_classes.py:136:    def __init__(self, text, descriptor):
-# roll_one_classes.py:146:    def _parse(self):
-# roll_one_classes.py:164:class Table:
-# roll_one_classes.py:167:    def __init__(self, text):
-# roll_one_classes.py:176:    def __repr__(self):
-# roll_one_classes.py:179:    def _parse(self):
-# roll_one_classes.py:188:    def roll(self):
-# roll_one_classes.py:218:class TableItem:
-# roll_one_classes.py:219:    '''This class allows simple handling of in-line subtables'''
-# roll_one_classes.py:220:    def __init__(self, text, w=0):
-# roll_one_classes.py:233:    def __repr__(self):
-# roll_one_classes.py:236:    def _parse(self):
-# roll_one_classes.py:266:    def get(self):
-# roll_one_classes.py:272:class InlineTable(Table):
-# roll_one_classes.py:273:    def __init__(self, text):
-# roll_one_classes.py:277:    def __repr__(self):
-# roll_one_classes.py:280:    def _parse(self):
-# roll_one_classes.py:314:class TableRoll:
-# roll_one_classes.py:315:    def __init__(self, d, rolled, head, out, err=None):
-# roll_one_classes.py:326:    def __repr__(self):
-# roll_one_classes.py:329:    def error(self, e):
-# roll_one_classes.py:332:    def unpack(self):
-
 from roll_one_util import *
 
 import random, praw, re, pickle, string, time
 from pprint import pprint  #for debugging / live testing
-
-_trash = string.punctuation + string.whitespace
-_header_regex = "^(\d+)?[dD](\d+)(.*)"
-_line_regex = "^(\d+)(\s*-+\s*\d+)?(.*)"
-_summons_regex = "u/roll_one_for_me"
 
 class Request:
     def __init__(self, praw_ref, r):
@@ -79,9 +19,9 @@ class Request:
         self.reddit = r
         self.tables_sources = []
         self.outcome = None
-        
+
         self._parse()
-        
+
     def __repr__(self):
         return "<Request from /u/{} in thread \"{}\">".format(self.origin.author, self.origin.submission.title)
 
@@ -100,12 +40,12 @@ class Request:
             if T.has_tables():
                 T._parse()
                 self.tables_sources.append(T)
-        
+
     def roll(self):
         instance = [TS.roll() for TS in self.tables_sources]
         instance = [x for x in instance if x]
         return "\n\n-----\n\n".join(instance)
-        
+
     def reply(self, reply_text):
         self.origin.reply(reply_text)
 
@@ -144,7 +84,7 @@ class TableSource:
         self.tables = []
 
         self._parse()
-        
+
     def __repr__(self):
         return "<TableSource from {}>".format(self.desc)
 
@@ -174,7 +114,7 @@ class TableSource:
         # TODO: if no headers found?
         if len(indices) == 0:
             return None
-        
+
         table_text = []
         for i in range(len(indices) -1):
             table_text.append("\n".join(lines[ indices[i]:indices[i+1] ]))
@@ -189,7 +129,7 @@ class TableSourceFromText(TableSource):
         self.tables = []
 
         self._parse()
-        
+
     # This is nearly identical to TableSource._parse ; if this is ever
     # used outside of testing, it behooves me to make a single
     # unifying method
@@ -249,7 +189,7 @@ class Table:
             while scan > 0:
                 ind += 1
                 scan -= weights[ind]
-                
+
             R = TableRoll(d=self.die,
                           rolled=c,
                           head=self.header,
@@ -262,7 +202,6 @@ class Table:
             logger("Exception in Table roll ({}): {}".format(self, e), _log_filename, debug)
             return None
 
- 
 class TableItem:
     '''This class allows simple handling of in-line subtables'''
     def __init__(self, text, w=0):
@@ -316,7 +255,7 @@ class TableItem:
             return self.outcome + self.inline_table.roll()
         else:
             return self.outcome
-        
+
 class InlineTable(Table):
     '''A Table object whose text is parsed in one line, instead of expecting line breaks'''
     def __init__(self, text):
@@ -330,7 +269,7 @@ class InlineTable(Table):
         top = re.search("[dD](\d+)(.*)", self.text)
         if not top:
             return
-        
+
         self.die = int(top.group(1))
         tail = top.group(2)
         sub_outs = []
@@ -351,7 +290,7 @@ class InlineTable(Table):
                 self.outcomes.append(TableItem(TI_text))
             except Exception as e:
                 logger("Error building TableItem in inline table; item skipped.", _log_filename, debug)
-                
+
 class TableRoll:
     def __init__(self, d, rolled, head, out, err=None):
         self.d = d
@@ -363,7 +302,7 @@ class TableRoll:
 
         if self.sub:
             self.sob_out = self.sub.roll()
-        
+
     def __repr__(self):
         return "<d{} TableRoll: {}>".format(self.d, self.head)
 

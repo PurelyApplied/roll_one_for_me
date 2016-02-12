@@ -8,7 +8,7 @@ def main():
         yn = input("read_logs.py (y/n)> ")
         if 'y' == yn:
             print(open(full_name, 'r').read())
-            
+
         print("read_logs.py> Delete log and pickle associated to {}?".format(name))
         yn = input("read_logs.py (y/n)> ")
         if 'y' == yn:
@@ -16,6 +16,6 @@ def main():
             print("os.system('rm '+fullname[:-4]+'.pickle')")
             #os.system('rm '+fullname)
             #os.system('rm '+fullname[:-4]+'.pickle')
-            
+
 if __name__=="__main__":
     main()

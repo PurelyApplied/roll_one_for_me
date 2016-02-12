@@ -11,24 +11,11 @@ import time, praw, os
 ##################
 # Some constants #
 ##################
-_version="1.2.3"
-_last_updated="2016-01-11"
-
-_sleep_on_error = 10
-_sleep_between_checks = 60
-
-_log_filename = "rofm.log"
-_log = None
-_log_dir = "./logs"
-
-_trivial_passes_per_heartbeat = 30
-
-_seen_max_len = 50
-_fetch_limit=25
 
 def main(debug=False):
     '''main(debug=False)
     Logs into Reddit, looks for unanswered user mentions, and generates and posts replies'''
+    get_globals()
     logger("Begin main()", _log_filename, debug)
     if not os.path.exists(_log_dir) or not os.path.isdir(_log_dir):
         logger("Creating log directory.", _log_filename, debug)
@@ -48,7 +35,7 @@ def main(debug=False):
                            _log_filename, debug)
                     trivial_passes_count = 0
                 time.sleep(_sleep_between_checks)
-                
+
         except Exception as e:
             logger("Top level.  Executing full reset.  Error details to follow.", _log_filename, debug)
             logger("Error: {}".format(e), _log_filename, debug)
@@ -122,7 +109,7 @@ def BeepBoop():
     '''Builds and returns reply footer "Beep Boop I'm a bot..."'''
     s = "\n\n-----\n\n"
     s += ("*Beep boop I'm a bot.  " +
-          "You can find details about me at " + 
+          "You can find details about me at " +
           "[this](https://www.reddit.com/r/DnDBehindTheScreen/comments/3rryc9/introducing_a_new_bot_uroll_one_for_me_for_all/) post.  " +
           "If it looks like I've gone off the rails and might be summoning SkyNet, let /u/PurelyApplied know, even though he sees all of these because of the mentions anyway.*" )
     s += "\n\n^(v{}; code base last updated {})".format(_version, _last_updated)
