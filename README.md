@@ -20,6 +20,8 @@ Generates an instance of a random table in a Reddit submission.
 
 * If a section header or anything similar contains a number, it may get parsed as a table outcome and then be ignored when the number of items does not match the die-roll value.
 
+* Ranges fail if anything other than a hyphen is used.  Em-dashes and En-dashes break, but should be included in the future.
+
 **Command Lexicon**
 
 * Currently, the only use is to summon the bot by saying its name.
