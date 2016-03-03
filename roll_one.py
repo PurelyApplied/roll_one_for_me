@@ -3,7 +3,7 @@
 
 # To add: Look for tables that are actual tables.
 # Look for keyword ROLL in tables and scan for arbitrary depth
-import string, random, time, praw, re, pickle, os
+import string, random, time, praw, re, pickle, os, sys
 from pprint import pprint  #for debugging / live testing
 
 def fdate():
@@ -33,9 +33,13 @@ _answer_attempts = 10
 _sleep_on_error = 10
 _sleep_between_checks = 60
 
+full_path = os.path.abspath(__file__)
+root_dir = os.path.dirname(full_path)
+os.chdir(root_dir)
+_log_dir = "./logs"
 _log_filename = "rofm.log"
 _log = None
-_log_dir = "./logs"
+
 
 _trivial_passes_per_heartbeat = 30
 
@@ -62,9 +66,10 @@ def main(debug=False):
                 time.sleep(_sleep_between_checks)
                 
         except Exception as e:
-            log("Top level.  Executing full reset.  Error details to follow.")
+            log("Top level.  Allowig to die for cron to revive.")
             log("Error: {}".format(e))
-            time.sleep(_sleep_on_error)
+            raise(e)
+
 
 _seen_max_len = 50
 _fetch_limit=25
@@ -104,6 +109,7 @@ def scan_submissions(seen, r):
         return False
 
 # returns True if anything processed
+########## THROWS IF SUBREDDIT MESSAGE, etc
 def process_mail(r):
     # log("Fetching unread mail.")
     my_mail = list(r.get_unread(unset_has_mail=False))
@@ -143,8 +149,10 @@ def BeepBoop():
 
 def sign_in():
     '''Sign in to reddit using PRAW; returns Reddit handle'''
-    r = praw.Reddit('Generate an outcome for random tables, under the name /u/roll_one_for_me'
-                    'Written and maintained by /u/PurelyApplied')
+    r = praw.Reddit(user_agent='Generate an outcome for random tables, under the name '
+                    '/u/roll_one_for_me '
+                    'Written and maintained by /u/PurelyApplied',
+                    site_name="roll_one")
     # login info in praw.ini
     r.login(disable_warning=True)
     return r
@@ -514,8 +522,10 @@ def log(s):
 
 T = "This has a d12 1 one 2 two 3 thr 4 fou 5-6 fiv/six 7 sev 8 eig 9 nin 10 ten 11 ele 12 twe"
 T = "This has a d12 1 one 2 two 3 thr 4 fou 5-6 fiv/six 7 sev 8 eig 9 nin 10 ten 11 ele 12 twe"
-debug = ("y" in input("Enable debugging?  ").lower() )
+debug = False
 if __name__=="__main__":
-    if 'y' in input("Run main?  ").lower():
+    print("Current working directory:", os.getcwd() )
+    if len(sys.argv) > 1:
         main()
-
+    elif 'y' in input("Run main? >> ").lower():
+        main()
