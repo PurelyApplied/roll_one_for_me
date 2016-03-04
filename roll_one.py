@@ -3,14 +3,13 @@
 
 # To add: Look for tables that are actual tables.
 # Look for keyword ROLL in tables and scan for arbitrary depth
-import time, praw, os
-import sys
-#from roll_one_classes import * # Also includes logger
-import random, praw, re, pickle, string, time
+import praw
+import sys, os, time
+import random, re, string
+import pickle
 from pprint import pprint  #for debugging / live testing
 
 #from roll_one_util import *
-import string
 
 
 ##################
@@ -34,6 +33,7 @@ _answer_attempts = 10
 _sleep_on_error = 10
 _sleep_between_checks = 60
 
+_log_dir = "./logs"
 ## This is done before if __main__; emacs doesn't define __file__
 # full_path = os.path.abspath(__file__)
 # root_dir = os.path.dirname(full_path)
@@ -171,10 +171,6 @@ A Table contains many TableItems.
 When a Table is rolled, the appropraite TableItems are identified.
 These are then built into TableRoll objects for reporting.
 '''
-
-import random, praw, re, pickle, string, time
-from pprint import pprint  #for debugging / live testing
-
 class Request:
     def __init__(self, praw_ref, r):
         self.origin = praw_ref
@@ -266,7 +262,6 @@ class TableSource:
 
     def _parse(self):
         indices = []
-        last_index = 0
         text = get_post_text(self.source)
         lines = text.split("\n")
         for line_num in range(len(lines)):
@@ -297,7 +292,6 @@ class TableSourceFromText(TableSource):
     # unifying method
     def _parse(self):
         indices = []
-        last_index = 0
         text = self.text
         lines = text.split("\n")
         for line_num in range(len(lines)):
@@ -344,7 +338,7 @@ class Table:
                 print("Weights ; Outcome")
                 pprint(list(zip(self.weights, self.outcomes)))
             assert self.die == total_weight, "Table roll error: parsed die did not match sum of item wieghts."
-            stops = [ sum(weights[:i+1]) for i in range(len(weights))]
+            #stops = [ sum(weights[:i+1]) for i in range(len(weights))]
             c = random.randint(1, self.die)
             scan = c
             ind = -1
@@ -434,7 +428,7 @@ class InlineTable(Table):
 
         self.die = int(top.group(1))
         tail = top.group(2)
-        sub_outs = []
+        #sub_outs = []
         while tail:
             in_match = re.search(_line_regex, tail.strip(_trash))
             if not in_match:
@@ -452,6 +446,7 @@ class InlineTable(Table):
                 self.outcomes.append(TableItem(TI_text))
             except Exception as e:
                 print("Error building TableItem in inline table; item skipped.")
+                print("Exception:", e)
 
 class TableRoll:
     def __init__(self, d, rolled, head, out, err=None):
