@@ -41,16 +41,23 @@ _log_dir = "./logs"
 
 _trivial_passes_per_heartbeat = 30
 
+def lprint(l):
+    '''Prints, prepending time to message'''
+    print("{}: {}".format(time.strftime("%y %m (%b) %d (%a) %H:%M:%S"),
+                          l))
+    
+
+
 def main(debug=False):
     '''main(debug=False)
     Logs into Reddit, looks for unanswered user mentions, and generates and posts replies'''
     # Initialize
-    print("Begin main()")
+    lprint("Begin main()")
     seen_by_sentinel = []
     # Core loop
     while True:
         try:
-            print("Signing into Reddit.")
+            lprint("Signing into Reddit.")
             r = sign_in()
             trivial_passes_count = _trivial_passes_per_heartbeat - 1
             while True:
@@ -58,12 +65,12 @@ def main(debug=False):
                 was_sub = scan_submissions(seen_by_sentinel, r)
                 trivial_passes_count += 1 if not was_mail and not was_sub else 0
                 if trivial_passes_count == _trivial_passes_per_heartbeat:
-                    print("Heartbeat.  {} passes without incident (or first pass).".format(_trivial_passes_per_heartbeat))
+                    lprint("Heartbeat.  {} passes without incident (or first pass).".format(_trivial_passes_per_heartbeat))
                     trivial_passes_count = 0
                 time.sleep(_sleep_between_checks)
         except Exception as e:
-            print("Top level.  Allowig to die for cron to revive.")
-            print("Error: {}".format(e))
+            lprint("Top level.  Allowig to die for cron to revive.")
+            lprint("Error: {}".format(e))
             raise(e)
 
 # Returns true if anything happened
@@ -91,14 +98,14 @@ def scan_submissions(seen, r):
                     seen.append(TS.source)
                     if not r.user in top_level_authors:
                         item.add_comment(keep_it_tidy_reply)
-                        print("Adding organizational comment to thread with title: {}".format(TS.source.title))
+                        lprint("Adding organizational comment to thread with title: {}".format(TS.source.title))
                         saw_something_said_something = True
 
         # Prune list to max size
         seen[:] = seen[-_seen_max_len:]
         return saw_something_said_something
     except Exception as e:
-        print("Error during submissions scan: {}".format(e))
+        lprint("Error during submissions scan: {}".format(e))
         return False
 
 # returns True if anything processed
@@ -116,13 +123,13 @@ def process_mail(r):
                 okay = False
             reply_text += BeepBoop()
             item.reply(reply_text)
-            print("{} resolving request: /u/{} @ {}.".format("Successfully" if okay else "Questionably",
+            lprint("{} resolving request: /u/{} @ {}.".format("Successfully" if okay else "Questionably",
                                                              item.origin.author,
                                                              item.origin.permalink))
             if not okay:
                 item.log(_log_dir)
         else:
-            print("Mail is not summons or error.  Logging item.")
+            lprint("Mail is not summons or error.  Logging item.")
             item.log(_log_dir)
         item.origin.mark_as_read()
     return ( 0 < len(to_process))
@@ -335,7 +342,7 @@ class Table:
             weights = [ i.weight for i in self.outcomes]
             total_weight = sum(weights)
             if debug:
-                print("Weights ; Outcome")
+                lprint("Weights ; Outcome")
                 pprint(list(zip(self.weights, self.outcomes)))
             assert self.die == total_weight, "Table roll error: parsed die did not match sum of item wieghts."
             #stops = [ sum(weights[:i+1]) for i in range(len(weights))]
@@ -355,7 +362,7 @@ class Table:
             return R
         # TODO: Handle errors more gracefully.
         except Exception as e:
-            print("Exception in Table roll ({}): {}".format(self, e))
+            lprint("Exception in Table roll ({}): {}".format(self, e))
             return None
 
 class TableItem:
@@ -398,9 +405,9 @@ class TableItem:
             try:
                 self.inline_table = InlineTable(self.outcome[die_regex.start():])
             except RuntimeError as e:
-                print("Error in inline_table parsing ; table item full text:")
-                print(self.text)
-                print(e)
+                lprint("Error in inline_table parsing ; table item full text:")
+                lprint(self.text)
+                lprint(e)
                 self.outcome = self.outcome[:die_regex.start()].strip(_trash)
         # this might be redundant
         self.outcome = self.outcome.strip(_trash)
@@ -445,8 +452,8 @@ class InlineTable(Table):
             try:
                 self.outcomes.append(TableItem(TI_text))
             except Exception as e:
-                print("Error building TableItem in inline table; item skipped.")
-                print("Exception:", e)
+                lprint("Error building TableItem in inline table; item skipped.")
+                lprint("Exception:", e)
 
 class TableRoll:
     def __init__(self, d, rolled, head, out, err=None):
