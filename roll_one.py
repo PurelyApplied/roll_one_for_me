@@ -69,6 +69,8 @@ def main(debug=False):
             lprint("Top level.  Allowing to die for cron to revive.")
             lprint("Error: {}".format(e))
             raise(e)
+        # We would like to avoid large caching and delayed logging.
+        sys.stdout.flush()
 
 # Returns true if anything happened
 def scan_submissions(seen, r):
