@@ -45,8 +45,6 @@ def lprint(l):
     '''Prints, prepending time to message'''
     print("{}: {}".format(time.strftime("%y %m (%b) %d (%a) %H:%M:%S"),
                           l))
-    
-
 
 def main(debug=False):
     '''main(debug=False)
@@ -72,6 +70,8 @@ def main(debug=False):
             lprint("Top level.  Allowig to die for cron to revive.")
             lprint("Error: {}".format(e))
             raise(e)
+        # We would like to avoid large caching and delayed logging.
+        sys.stdout.flush()
 
 # Returns true if anything happened
 def scan_submissions(seen, r):
