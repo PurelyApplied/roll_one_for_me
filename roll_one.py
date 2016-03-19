@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-# For top-level comment scanning, you need to get submission's ID and call r.get_submission(url=None, id=ID).  Otherwise you only get the summoning comment (and perhaps the path to it)
 
 # To add: Look for tables that are actual tables.
 # Look for keyword ROLL in tables and scan for arbitrary depth
@@ -9,8 +8,12 @@ import random, re, string
 import pickle
 from pprint import pprint  #for debugging / live testing
 
-#from roll_one_util import *
-
+try:
+    full_path = os.path.abspath(__file__)
+    root_dir = os.path.dirname(full_path)
+    os.chdir(root_dir)
+except:
+    pass
 
 ##################
 # Some constants #
@@ -34,10 +37,6 @@ _sleep_on_error = 10
 _sleep_between_checks = 60
 
 _log_dir = "./logs"
-## This is done before if __main__; emacs doesn't define __file__
-# full_path = os.path.abspath(__file__)
-# root_dir = os.path.dirname(full_path)
-# os.chdir(root_dir)
 
 _trivial_passes_per_heartbeat = 30
 
@@ -45,8 +44,6 @@ def lprint(l):
     '''Prints, prepending time to message'''
     print("{}: {}".format(time.strftime("%y %m (%b) %d (%a) %H:%M:%S"),
                           l))
-    
-
 
 def main(debug=False):
     '''main(debug=False)
@@ -69,7 +66,7 @@ def main(debug=False):
                     trivial_passes_count = 0
                 time.sleep(_sleep_between_checks)
         except Exception as e:
-            lprint("Top level.  Allowig to die for cron to revive.")
+            lprint("Top level.  Allowing to die for cron to revive.")
             lprint("Error: {}".format(e))
             raise(e)
 
@@ -178,6 +175,7 @@ A Table contains many TableItems.
 When a Table is rolled, the appropraite TableItems are identified.
 These are then built into TableRoll objects for reporting.
 '''
+
 class Request:
     def __init__(self, praw_ref, r):
         self.origin = praw_ref
@@ -196,15 +194,32 @@ class Request:
         attempts to parse each for tables.
 
         '''
-        T = TableSource(self.origin.submission, "this thread's original post")
+        # Default behavior: OP and top-level comments, as applicable
+        
+        if re.search("\[.*?\]\(.*?\)", self.origin.body):
+            self.get_link_sources()
+        else:
+            self.get_default_sources()
+
+
+
+    def _maybe_add_source(source, desc):
+        '''Looks at PRAW submission and adds it if tables can be found.'''
+        T = TableSource(source, desc)
         if T.has_tables():
             self.tables_sources.append(T)
+
+    def get_link_sources(self):
+        pass
+
+    def get_default_sources(self):
+        '''Default sources are OP and top-level comments'''
+        # Add OP
+        self._maybe_add_source(self.origin.submission, "this thread's original post")
+        # Add Top-level comments
         top_level_comments = self.reddit.get_submission(None, self.origin.submission.id).comments
         for item in top_level_comments:
-            T = TableSource(item, "[this]({}) comment by {}".format(item.permalink, item.author) )
-            if T.has_tables():
-                T._parse()
-                self.tables_sources.append(T)
+            self._maybe_add_source(item, "[this]({}) comment by {}".format(item.permalink, item.author) )
 
     def roll(self):
         instance = [TS.roll() for TS in self.tables_sources]
@@ -486,7 +501,6 @@ class TableRoll:
 ## util
 '''Contains roll_one_for_me utility functions'''
 
-
 # Used by both Request and TableSource ; should perhaps depricate this
 # and give each class its own method
 def get_post_text(post):
@@ -506,13 +520,6 @@ def fdate():
 T = "This has a d12 1 one 2 two 3 thr 4 fou 5-6 fiv/six 7 sev 8 eig 9 nin 10 ten 11 ele 12 twe"
 T = "This has a d12 1 one 2 two 3 thr 4 fou 5-6 fiv/six 7 sev 8 eig 9 nin 10 ten 11 ele 12 twe"
 debug = False
-
-try:
-    full_path = os.path.abspath(__file__)
-    root_dir = os.path.dirname(full_path)
-    os.chdir(root_dir)
-except:
-    pass
 
 if __name__=="__main__":
     print("Current working directory:", os.getcwd() )
