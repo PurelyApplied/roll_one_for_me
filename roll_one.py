@@ -214,12 +214,12 @@ class Request:
         '''
         # Default behavior: OP and top-level comments, as applicable
         
-        print("Parsing Request...", file=sys.stderr)
+        #print("Parsing Request...", file=sys.stderr)
         if re.search("\[.*?\]\s*\(.*?\)", self.origin.body):
-            print("Adding links...", file=sys.stderr)
+            #print("Adding links...", file=sys.stderr)
             self.get_link_sources()
         else:
-            print("Adding default set...", file=sys.stderr)
+            #print("Adding default set...", file=sys.stderr)
             self.get_default_sources()
 
 
@@ -232,8 +232,8 @@ class Request:
 
     def get_link_sources(self):
         links = re.findall("\[.*?\]\s*\(.*?\)", self.origin.body)
-        print("Link set:", file=sys.stderr)
-        print("\n".join([str(l) for l in links]), file=sys.stderr)
+        #print("Link set:", file=sys.stderr)
+        #print("\n".join([str(l) for l in links]), file=sys.stderr)
         for item in links:
             desc, href = re.search("\[(.*?)\]\s*\((.*?)\)", item).groups()
             if re.search("reddit", href):
@@ -272,7 +272,10 @@ class Request:
         with open(filename, 'w') as f:
             f.write("Time    :  {}\n".format(fdate() ))
             f.write("Author  :  {}\n".format(self.origin.author))
-            f.write("Link    :  {}\n".format(self.origin.permalink))
+            try:
+                f.write("Link    :  {}\n".format(self.origin.permalink))
+            except:
+                f.write("Link    :  Unavailable (PM?)\n")
             f.write("Type    :  {}\n".format(type(self.origin)))
             try:
                 f.write("Body    : (below)\n[Begin body]\n{}\n[End body]\n".format( get_post_text(self.origin)))
