@@ -195,6 +195,9 @@ class Request:
         self._parse()
 
     def __repr__(self):
+        return "<Request from >".format(str(self))
+
+    def __str__(self):
         via = None
         if type(self.origin) == praw.objects.Comment:
             via = "mention in {}".format(self.origin.submission.title)
@@ -202,8 +205,7 @@ class Request:
             via = "private message"
         else:
             via = "a mystery!"
-        return "<Request from /u/{} via {}>".format(self.origin.author, via)
-             
+        return "/u/{} via {}".format(self.origin.author, via)
 
     def _parse(self):
         '''Fetches text of submission and top-level comments from thread
