@@ -24,9 +24,13 @@ Generates an instance of a random table in a Reddit submission.
 
 **Command Lexicon**
 
-* Currently, the only use is to summon the bot by saying its name.
-  (Some prefer to chant the bot's name, shrouding themselves in darkness and calling to the corners of creation.
-  It has not been confirmed if this behavior produces qualitatively different outcomes.)
+* Mentions: Call the bot by using /u/roll_one_for_me in any comment
+  post.  (The slashes are important.)  This will look for tables in
+  the OP and top-level comments.  Alternatively, if a link is
+  provided, it will look for tables at the links *instead*.
+
+* Private Messages: You may also send the bot a PM with links and it
+  will reply with a roll.
 
 * Current thoughts for planned features:  Hard brackets to denote targeted tables, with another (optional) internal set of brackets indicating any desired effects. Additional tables can be specified with additional bracketed items.  A *Table Reference* will be (1) a link to another table, (2) the keyword "OP" to refer to the submission in which a comment is contained, or (3) the keyword "comments" to refer to all top-level comments in a thread.  If no specifics are given, default behavior is to roll one of everything.  If no brackets are given, the default behavior will be "[OP] [comments]".  
     * [Table reference 1 [ Table 1 specific choices (format TBD) ] ] [Table reference 2]
@@ -39,11 +43,12 @@ Generates an instance of a random table in a Reddit submission.
 * Parses in-line tables
 * Capable of parsing tables with ranges.  Excepts digits separated by (a) hyphen(s).  This may appear both at the top-level and in inline subtables.
 * Also monitors new posts to /r/DnDBehindTheScreen and announces seeds a top-level comment for better organization of roll requests.
+* Capable of processing links to other other tables.  Links must link to Reddit and not use redd.it redirecting.  Currently only able to process submission links, not links to comments.
+* Capable of processing PMs.
 
 **Planned Features:**
 
-* Follow links to find other tables.  This will be limited to direct links to Reddit posts (submissions or comments both) only; links off-site or additional links on the targeted post will be ignored.
-* PM Requests:  Once links are worked out, you will be able to PM the bot with links and it will respond with an instance.
+* Allow links to comments containing tables, not only Submission posts.
 * Parse multiple dice: resolve <n>d<k> for n > 1
 * Selective rolling: Specify which items you would like rolled, to ignore / include comment tables, et cetera
 * Multiple rolling: Allowing some or all items to be rolled multiply, either with or without repetition of outcome

@@ -243,12 +243,15 @@ class Request:
                 
     def get_default_sources(self):
         '''Default sources are OP and top-level comments'''
-        # Add OP
-        self._maybe_add_source(self.origin.submission, "this thread's original post")
-        # Add Top-level comments
-        top_level_comments = self.reddit.get_submission(None, self.origin.submission.id).comments
-        for item in top_level_comments:
-            self._maybe_add_source(item, "[this]({}) comment by {}".format(item.permalink, item.author) )
+        try:
+            # Add OP
+            self._maybe_add_source(self.origin.submission, "this thread's original post")
+            # Add Top-level comments
+            top_level_comments = self.reddit.get_submission(None, self.origin.submission.id).comments
+            for item in top_level_comments:
+                self._maybe_add_source(item, "[this]({}) comment by {}".format(item.permalink, item.author) )
+        except:
+            lprint("Could not add default sources.  (PM without links?)")
 
     def roll(self):
         instance = [TS.roll() for TS in self.tables_sources]
