@@ -1,5 +1,12 @@
 #!/usr/bin/python3
-# For top-level comment scanning, you need to get submission's ID and call r.get_submission(url=None, id=ID).  Otherwise you only get the summoning comment (and perhaps the path to it)
+
+# Incomming messages will differentiate by type: Mentions are
+# praw.objects.Comment.  PM will me praw.objects.Message.  (And OP
+# items will be praw.objects.Submission)
+
+# If a link is to a comment, get_submission resolves the OP with one
+# comment (the actual comment linked), even if it is greater than one
+# generation deep in comments.
 
 # To add: Look for tables that are actual tables.
 # Look for keyword ROLL in tables and scan for arbitrary depth
@@ -9,8 +16,12 @@ import random, re, string
 import pickle
 from pprint import pprint  #for debugging / live testing
 
-#from roll_one_util import *
-
+try:
+    full_path = os.path.abspath(__file__)
+    root_dir = os.path.dirname(full_path)
+    os.chdir(root_dir)
+except:
+    pass
 
 ##################
 # Some constants #
@@ -34,10 +45,6 @@ _sleep_on_error = 10
 _sleep_between_checks = 60
 
 _log_dir = "./logs"
-## This is done before if __main__; emacs doesn't define __file__
-# full_path = os.path.abspath(__file__)
-# root_dir = os.path.dirname(full_path)
-# os.chdir(root_dir)
 
 _trivial_passes_per_heartbeat = 30
 
@@ -67,7 +74,7 @@ def main(debug=False):
                     trivial_passes_count = 0
                 time.sleep(_sleep_between_checks)
         except Exception as e:
-            lprint("Top level.  Allowig to die for cron to revive.")
+            lprint("Top level.  Allowing to die for cron to revive.")
             lprint("Error: {}".format(e))
             raise(e)
         # We would like to avoid large caching and delayed logging.
@@ -109,13 +116,12 @@ def scan_submissions(seen, r):
         return False
 
 # returns True if anything processed
-########## THROWS IF SUBREDDIT MESSAGE, etc
 def process_mail(r):
     '''Processes notifications.  Returns True if any item was processed.'''
     my_mail = list(r.get_unread(unset_has_mail=False))
     to_process = [Request(x, r) for x in my_mail]
     for item in to_process:
-        if item.is_summons():
+        if item.is_summons() or item.is_PM():
             reply_text = item.roll()
             okay = True
             if not reply_text:
@@ -123,9 +129,8 @@ def process_mail(r):
                 okay = False
             reply_text += BeepBoop()
             item.reply(reply_text)
-            lprint("{} resolving request: /u/{} @ {}.".format("Successfully" if okay else "Questionably",
-                                                             item.origin.author,
-                                                             item.origin.permalink))
+            lprint("{} resolving request: {}.".format("Successfully" if okay else "Questionably",
+                                                      item))
             if not okay:
                 item.log(_log_dir)
         else:
@@ -178,6 +183,7 @@ A Table contains many TableItems.
 When a Table is rolled, the appropraite TableItems are identified.
 These are then built into TableRoll objects for reporting.
 '''
+
 class Request:
     def __init__(self, praw_ref, r):
         self.origin = praw_ref
@@ -188,7 +194,17 @@ class Request:
         self._parse()
 
     def __repr__(self):
-        return "<Request from /u/{} in thread \"{}\">".format(self.origin.author, self.origin.submission.title)
+        return "<Request from >".format(str(self))
+
+    def __str__(self):
+        via = None
+        if type(self.origin) == praw.objects.Comment:
+            via = "mention in {}".format(self.origin.submission.title)
+        elif type(self.origin) == praw.objects.Message:
+            via = "private message"
+        else:
+            via = "a mystery!"
+        return "/u/{} via {}".format(self.origin.author, via)
 
     def _parse(self):
         '''Fetches text of submission and top-level comments from thread
@@ -196,15 +212,43 @@ class Request:
         attempts to parse each for tables.
 
         '''
-        T = TableSource(self.origin.submission, "this thread's original post")
+        # Default behavior: OP and top-level comments, as applicable
+        
+        print("Parsing Request...", file=sys.stderr)
+        if re.search("\[.*?\]\s*\(.*?\)", self.origin.body):
+            print("Adding links...", file=sys.stderr)
+            self.get_link_sources()
+        else:
+            print("Adding default set...", file=sys.stderr)
+            self.get_default_sources()
+
+
+
+    def _maybe_add_source(self, source, desc):
+        '''Looks at PRAW submission and adds it if tables can be found.'''
+        T = TableSource(source, desc)
         if T.has_tables():
             self.tables_sources.append(T)
+
+    def get_link_sources(self):
+        links = re.findall("\[.*?\]\s*\(.*?\)", self.origin.body)
+        print("Link set:", file=sys.stderr)
+        print("\n".join([str(l) for l in links]), file=sys.stderr)
+        for item in links:
+            desc, href = re.search("\[(.*?)\]\s*\((.*?)\)", item).groups()
+            if re.search("reddit", href):
+                self._maybe_add_source(
+                    self.reddit.get_submission(href),
+                    desc)
+                
+    def get_default_sources(self):
+        '''Default sources are OP and top-level comments'''
+        # Add OP
+        self._maybe_add_source(self.origin.submission, "this thread's original post")
+        # Add Top-level comments
         top_level_comments = self.reddit.get_submission(None, self.origin.submission.id).comments
         for item in top_level_comments:
-            T = TableSource(item, "[this]({}) comment by {}".format(item.permalink, item.author) )
-            if T.has_tables():
-                T._parse()
-                self.tables_sources.append(T)
+            self._maybe_add_source(item, "[this]({}) comment by {}".format(item.permalink, item.author) )
 
     def roll(self):
         instance = [TS.roll() for TS in self.tables_sources]
@@ -216,6 +260,9 @@ class Request:
 
     def is_summons(self):
         return re.search(_summons_regex, get_post_text(self.origin).lower())
+
+    def is_PM(self):
+        return type(self.origin) == praw.objects.Message
 
     def log(self, log_dir):
         filename = "{}/rofm-{}-{}.log".format(log_dir, self.origin.author, self.origin.fullname)
@@ -486,7 +533,6 @@ class TableRoll:
 ## util
 '''Contains roll_one_for_me utility functions'''
 
-
 # Used by both Request and TableSource ; should perhaps depricate this
 # and give each class its own method
 def get_post_text(post):
@@ -496,23 +542,18 @@ def get_post_text(post):
     elif type(post) == praw.objects.Submission:
         return post.selftext
     else:
-        raise RuntimeError("Attempt to get post text from non-Comment / non-Submission post.")
+        lprint("Attempt to get post text from non-Comment / non-Submission post; returning empty string")
+        return ""
 
 def fdate():
     return "-".join(str(x) for x in time.gmtime()[:6])
 
 ####################
 
-T = "This has a d12 1 one 2 two 3 thr 4 fou 5-6 fiv/six 7 sev 8 eig 9 nin 10 ten 11 ele 12 twe"
+_test_table = "https://www.reddit.com/r/DnDBehindTheScreen/comments/4aqi2l/fashion_and_style/"
+_test_request = "https://www.reddit.com/r/DnDBehindTheScreen/comments/4aqi2l/fashion_and_style/d12wero"
 T = "This has a d12 1 one 2 two 3 thr 4 fou 5-6 fiv/six 7 sev 8 eig 9 nin 10 ten 11 ele 12 twe"
 debug = False
-
-try:
-    full_path = os.path.abspath(__file__)
-    root_dir = os.path.dirname(full_path)
-    os.chdir(root_dir)
-except:
-    pass
 
 if __name__=="__main__":
     print("Current working directory:", os.getcwd() )
