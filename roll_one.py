@@ -129,9 +129,8 @@ def process_mail(r):
                 okay = False
             reply_text += BeepBoop()
             item.reply(reply_text)
-            lprint("{} resolving request: /u/{} @ {}.".format("Successfully" if okay else "Questionably",
-                                                             item.origin.author,
-                                                             item.origin.permalink))
+            lprint("{} resolving request: {}.".format("Successfully" if okay else "Questionably",
+                                                      item))
             if not okay:
                 item.log(_log_dir)
         else:
@@ -216,7 +215,7 @@ class Request:
         # Default behavior: OP and top-level comments, as applicable
         
         print("Parsing Request...", file=sys.stderr)
-        if re.search("\[.*?\]\(.*?\)", self.origin.body):
+        if re.search("\[.*?\]\s*\(.*?\)", self.origin.body):
             print("Adding links...", file=sys.stderr)
             self.get_link_sources()
         else:
