@@ -26,8 +26,8 @@ except:
 ##################
 # Some constants #
 ##################
-_version="1.4.0"
-_last_updated="2016-03-21"
+_version="1.4.1"
+_last_updated="2016-04-18"
 
 _seen_max_len = 50
 _fetch_limit=25
