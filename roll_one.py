@@ -489,7 +489,10 @@ class InlineTable(Table):
         while tail:
             in_match = re.search(_line_regex, tail.strip(_trash))
             if not in_match:
-                raise RuntimeError("Could not complete parsing InlineTable; in_match did not catch.")
+                lprint("Could not complete parsing InlineTable; in_match did not catch.")
+                lprint("Returning blank roll area.")
+                self.outcomes = [TableItem("1-{}. N/A".format(self.die))]
+                return
             this_out = in_match.group(3)
             next_match = re.search(_line_regex[1:], this_out)
             if next_match:
