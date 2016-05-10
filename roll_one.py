@@ -128,6 +128,10 @@ def process_mail(r):
                 reply_text = "I'm sorry, but I can't find anything that I know how to parse.\n\n"
                 okay = False
             reply_text += BeepBoop()
+            if len(reply_text) > 10000:
+                addition = "\n\n**This reply would exceed 10000 characters and has been shortened.  Chaining replies is an intended future feature."
+                clip_point = 10000 - len(addition) - len(BeepBoop()) - 200
+                reply_text = reply_text[:clip_point] + addition + BeepBoop()
             item.reply(reply_text)
             lprint("{} resolving request: {}.".format("Successfully" if okay else "Questionably",
                                                       item))
