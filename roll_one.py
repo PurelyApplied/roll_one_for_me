@@ -26,8 +26,8 @@ except:
 ##################
 # Some constants #
 ##################
-_version="1.4.0"
-_last_updated="2016-03-21"
+_version="1.4.1"
+_last_updated="2016-04-18"
 
 _seen_max_len = 50
 _fetch_limit=25
@@ -128,6 +128,10 @@ def process_mail(r):
                 reply_text = "I'm sorry, but I can't find anything that I know how to parse.\n\n"
                 okay = False
             reply_text += BeepBoop()
+            if len(reply_text) > 10000:
+                addition = "\n\n**This reply would exceed 10000 characters and has been shortened.  Chaining replies is an intended future feature."
+                clip_point = 10000 - len(addition) - len(BeepBoop()) - 200
+                reply_text = reply_text[:clip_point] + addition + BeepBoop()
             item.reply(reply_text)
             lprint("{} resolving request: {}.".format("Successfully" if okay else "Questionably",
                                                       item))
@@ -214,12 +218,12 @@ class Request:
         '''
         # Default behavior: OP and top-level comments, as applicable
         
-        print("Parsing Request...", file=sys.stderr)
+        #print("Parsing Request...", file=sys.stderr)
         if re.search("\[.*?\]\s*\(.*?\)", self.origin.body):
-            print("Adding links...", file=sys.stderr)
+            #print("Adding links...", file=sys.stderr)
             self.get_link_sources()
         else:
-            print("Adding default set...", file=sys.stderr)
+            #print("Adding default set...", file=sys.stderr)
             self.get_default_sources()
 
 
@@ -232,8 +236,8 @@ class Request:
 
     def get_link_sources(self):
         links = re.findall("\[.*?\]\s*\(.*?\)", self.origin.body)
-        print("Link set:", file=sys.stderr)
-        print("\n".join([str(l) for l in links]), file=sys.stderr)
+        #print("Link set:", file=sys.stderr)
+        #print("\n".join([str(l) for l in links]), file=sys.stderr)
         for item in links:
             desc, href = re.search("\[(.*?)\]\s*\((.*?)\)", item).groups()
             if re.search("reddit", href):
@@ -272,7 +276,10 @@ class Request:
         with open(filename, 'w') as f:
             f.write("Time    :  {}\n".format(fdate() ))
             f.write("Author  :  {}\n".format(self.origin.author))
-            f.write("Link    :  {}\n".format(self.origin.permalink))
+            try:
+                f.write("Link    :  {}\n".format(self.origin.permalink))
+            except:
+                f.write("Link    :  Unavailable (PM?)\n")
             f.write("Type    :  {}\n".format(type(self.origin)))
             try:
                 f.write("Body    : (below)\n[Begin body]\n{}\n[End body]\n".format( get_post_text(self.origin)))
@@ -306,6 +313,7 @@ class TableSource:
 
     def roll(self):
         instance = [T.roll() for T in self.tables]
+        # Prune failed rolls
         instance = [x for x in instance if x]
         if instance:
             ret = "From {}...\n\n".format(self.desc)
@@ -394,7 +402,8 @@ class Table:
             if debug:
                 lprint("Weights ; Outcome")
                 pprint(list(zip(self.weights, self.outcomes)))
-            assert self.die == total_weight, "Table roll error: parsed die did not match sum of item wieghts."
+            if self.die != total_weight:
+                self.header = "[Table roll error: parsed die did not match sum of item wieghts.]  \n" + self.header
             #stops = [ sum(weights[:i+1]) for i in range(len(weights))]
             c = random.randint(1, self.die)
             scan = c
