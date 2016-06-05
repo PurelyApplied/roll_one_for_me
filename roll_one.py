@@ -313,6 +313,7 @@ class TableSource:
 
     def roll(self):
         instance = [T.roll() for T in self.tables]
+        # Prune failed rolls
         instance = [x for x in instance if x]
         if instance:
             ret = "From {}...\n\n".format(self.desc)
@@ -401,7 +402,8 @@ class Table:
             if debug:
                 lprint("Weights ; Outcome")
                 pprint(list(zip(self.weights, self.outcomes)))
-            assert self.die == total_weight, "Table roll error: parsed die did not match sum of item wieghts."
+            if self.die != total_weight:
+                self.header = "[Table roll error: parsed die did not match sum of item wieghts.]  \n" + self.header
             #stops = [ sum(weights[:i+1]) for i in range(len(weights))]
             c = random.randint(1, self.die)
             scan = c
