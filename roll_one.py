@@ -11,8 +11,12 @@
 # To add: Look for tables that are actual tables.
 # Look for keyword ROLL in tables and scan for arbitrary depth
 import praw
-import sys, os, time
-import random, re, string
+import sys
+import os
+import time
+import random
+import re
+import string
 import pickle
 from pprint import pprint  #for debugging / live testing
 
@@ -240,7 +244,20 @@ class Request:
         #print("\n".join([str(l) for l in links]), file=sys.stderr)
         for item in links:
             desc, href = re.search("\[(.*?)\]\s*\((.*?)\)", item).groups()
-            if re.search("reddit", href):
+            href = href.strip()
+            if "reddit.com" in href.lower():
+                lprint("Fetching href: {}".format(href.lower()))
+                if "m.reddit" in href.lower():
+                    lprint("Removing mobile 'm.'")
+                    href = href.lower().replace("m.reddit", "reddit", 1)
+                if ".json" in href.lower():
+                    lprint("Pruning .json and anything beyond.")
+                    href = href[:href.find('.json')]
+                if not 'www' in href.lower():
+                    lprint("Injecting 'www.' to href")
+                    href = href[:href.find("reddit.com")] + 'www.' + href[href.find("reddit.com"):]
+                href = href.rstrip("/")
+                lprint("Processing href: {}".format(href))
                 self._maybe_add_source(
                     self.reddit.get_submission(href),
                     desc)
