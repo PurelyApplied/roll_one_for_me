@@ -10,6 +10,7 @@
 
 # To add: Look for tables that are actual tables.
 # Look for keyword ROLL in tables and scan for arbitrary depth
+
 import praw
 import sys, os, time
 import random, re, string
@@ -26,6 +27,7 @@ except:
 ##################
 # Some constants #
 ##################
+# TODO: This should be a config file.
 _version="1.4.1"
 _last_updated="2016-04-18"
 
@@ -48,14 +50,18 @@ _log_dir = "./logs"
 
 _trivial_passes_per_heartbeat = 30
 
+# Log print
 def lprint(l):
     '''Prints, prepending time to message'''
-    print("{}: {}".format(time.strftime("%y %m (%b) %d (%a) %H:%M:%S"),
-                          l))
+    print("{}: {}".format(time.strftime("%y %m (%b) %d (%a) %H:%M:%S"), l))
+
 
 def main(debug=False):
     '''main(debug=False)
-    Logs into Reddit, looks for unanswered user mentions, and generates and posts replies'''
+    Logs into Reddit, looks for unanswered user mentions, and
+    generates and posts replies
+
+    '''
     # Initialize
     lprint("Begin main()")
     seen_by_sentinel = []
@@ -80,19 +86,25 @@ def main(debug=False):
         # We would like to avoid large caching and delayed logging.
         sys.stdout.flush()
 
+
 # Returns true if anything happened
 def scan_submissions(seen, r):
     '''This function groups the following:
     * Get the newest submissions to /r/DnDBehindTheStreen
     * Attempt to parse the item as containing tables
-    * If tables are detected, post a top-level comment requesting that table rolls be performed there for readability
+    * If tables are detected, post a top-level comment requesting that
+      table rolls be performed there for readability
     # * Update list of seen tables
     # * Prune seen tables list if large.
+
     '''
     try:
-        keep_it_tidy_reply = ("It looks like this post has some tables that I might be able to parse.  " +
-                              "To keep things tidy and not detract from actual discussion of these tables, please make your /u/roll_one_for_me requests as children to this comment." +
-                              BeepBoop() )
+        keep_it_tidy_reply = (
+            "It looks like this post has some tables I might be able to parse."
+            "  To keep things tidy and not detract from actual discussion"
+            " of these tables, please make your /u/roll_one_for_me requests"
+            " as children to this comment." +
+            BeepBoop() )
         BtS = r.get_subreddit('DnDBehindTheScreen')
         new_subs = BtS.get_new(limit=_fetch_limit)
         saw_something_said_something = False
@@ -115,6 +127,7 @@ def scan_submissions(seen, r):
         lprint("Error during submissions scan: {}".format(e))
         return False
 
+
 # returns True if anything processed
 def process_mail(r):
     '''Processes notifications.  Returns True if any item was processed.'''
@@ -125,16 +138,19 @@ def process_mail(r):
             reply_text = item.roll()
             okay = True
             if not reply_text:
-                reply_text = "I'm sorry, but I can't find anything that I know how to parse.\n\n"
+                reply_text = ("I'm sorry, but I can't find anything"
+                              " that I know how to parse.\n\n")
                 okay = False
             reply_text += BeepBoop()
             if len(reply_text) > 10000:
-                addition = "\n\n**This reply would exceed 10000 characters and has been shortened.  Chaining replies is an intended future feature."
+                addition = ("\n\n**This reply would exceed 10000 characters"
+                            " and has been shortened.  Chaining replies is an"
+                            " intended future feature.")
                 clip_point = 10000 - len(addition) - len(BeepBoop()) - 200
                 reply_text = reply_text[:clip_point] + addition + BeepBoop()
             item.reply(reply_text)
-            lprint("{} resolving request: {}.".format("Successfully" if okay else "Questionably",
-                                                      item))
+            lprint("{} resolving request: {}.".format(
+                "Successfully" if okay else "Questionably", item))
             if not okay:
                 item.log(_log_dir)
         else:
@@ -143,25 +159,30 @@ def process_mail(r):
         item.origin.mark_as_read()
     return ( 0 < len(to_process))
 
+
 def BeepBoop():
     '''Builds and returns reply footer "Beep Boop I'm a bot..."'''
     s = "\n\n-----\n\n"
-    s += ("*Beep boop I'm a bot.  " +
-          "You can find usage and known issue details about me, as well as my source code, on " +
-          "[GitHub](https://github.com/PurelyApplied/roll_one_for_me) page.  " +
-          "I am maintained by /u/PurelyApplied.*" )
+    s += ("*Beep boop I'm a bot."
+          "  You can find usage and known issue details about me,"
+          " as well as my source code, on"
+          " [GitHub](https://github.com/PurelyApplied/roll_one_for_me)."
+          "  I am maintained by /u/PurelyApplied.*" )
     s += "\n\n^(v{}; code base last updated {})".format(_version, _last_updated)
     return s
 
+
 def sign_in():
     '''Sign in to reddit using PRAW; returns Reddit handle'''
-    r = praw.Reddit(user_agent='Generate an outcome for random tables, under the name '
-                    '/u/roll_one_for_me '
-                    'Written and maintained by /u/PurelyApplied',
-                    site_name="roll_one")
-    # login info in praw.ini
+    r = praw.Reddit(
+        user_agent=(
+            'Generate an outcome for random tables, under the name'
+            '/u/roll_one_for_me. Written and maintained by /u/PurelyApplied'),
+        site_name="roll_one")
+    # login info in praw.ini.  TODO: OAuth2
     r.login(disable_warning=True)
     return r
+
 
 def test(mens=True):
     '''test(return_mentions=True)
@@ -175,6 +196,9 @@ def test(mens=True):
     else:
         mentions = None
     return r, my_mail, mentions
+
+
+#TODO: Each class is poorly commented.
 
 ####################
 # classes
@@ -299,6 +323,7 @@ class Request:
     def describe_source(self):
         return "From [this]({}) post by user {}...".format(self.source.permalink, self.source.author)
 
+
 class TableSource:
     def __init__(self, praw_ref, descriptor):
         self.source = praw_ref
@@ -344,6 +369,7 @@ class TableSource:
 
         self.tables = [ Table(t) for t in table_text ]
 
+
 class TableSourceFromText(TableSource):
     def __init__(self, text, descriptor):
         self.text = text
@@ -370,6 +396,7 @@ class TableSourceFromText(TableSource):
             table_text.append("\n".join(lines[ indices[i]:indices[i+1] ]))
         table_text.append("\n".join(lines[ indices[-1]: ]))
         self.tables = [ Table(t) for t in table_text ]
+
 
 class Table:
     '''Container for a single set of TableItem objects
@@ -423,6 +450,7 @@ class Table:
         except Exception as e:
             lprint("Exception in Table roll ({}): {}".format(self, e))
             return None
+
 
 class TableItem:
     '''This class allows simple handling of in-line subtables'''
@@ -478,6 +506,7 @@ class TableItem:
         else:
             return self.outcome
 
+
 class InlineTable(Table):
     '''A Table object whose text is parsed in one line, instead of expecting line breaks'''
     def __init__(self, text):
@@ -516,6 +545,7 @@ class InlineTable(Table):
             except Exception as e:
                 lprint("Error building TableItem in inline table; item skipped.")
                 lprint("Exception:", e)
+
 
 class TableRoll:
     def __init__(self, d, rolled, head, out, err=None):
@@ -557,18 +587,18 @@ def get_post_text(post):
     elif type(post) == praw.objects.Submission:
         return post.selftext
     else:
-        lprint("Attempt to get post text from non-Comment / non-Submission post; returning empty string")
+        lprint("Attempt to get post text from"
+               " non-Comment / non-Submission post; returning empty string")
         return ""
 
 def fdate():
     return "-".join(str(x) for x in time.gmtime()[:6])
 
 ####################
-
+# Some testing items
 _test_table = "https://www.reddit.com/r/DnDBehindTheScreen/comments/4aqi2l/fashion_and_style/"
 _test_request = "https://www.reddit.com/r/DnDBehindTheScreen/comments/4aqi2l/fashion_and_style/d12wero"
 T = "This has a d12 1 one 2 two 3 thr 4 fou 5-6 fiv/six 7 sev 8 eig 9 nin 10 ten 11 ele 12 twe"
-debug = False
 
 if __name__=="__main__":
     print("Current working directory:", os.getcwd() )
