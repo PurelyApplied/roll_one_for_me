@@ -153,7 +153,8 @@ def BeepBoop():
     s += ("*Beep boop I'm a bot.  " +
           "You can find usage and known issue details about me, as well as my source code, on " +
           "[GitHub](https://github.com/PurelyApplied/roll_one_for_me) page.  " +
-          "I am maintained by /u/PurelyApplied.*" )
+          "I am maintained by /u/PurelyApplied.*\n\n"
+          )
     s += "\n\n^(v{}; code base last updated {})".format(_version, _last_updated)
     return s
 
