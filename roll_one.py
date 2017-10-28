@@ -443,9 +443,9 @@ class Table:
         try:
             weights = [ i.weight for i in self.outcomes]
             total_weight = sum(weights)
-            if debug:
-                lprint("Weights ; Outcome")
-                pprint(list(zip(self.weights, self.outcomes)))
+#            if debug:
+#                lprint("Weights ; Outcome")
+#                pprint(list(zip(self.weights, self.outcomes)))
             if self.die != total_weight:
                 self.header = "[Table roll error: parsed die did not match sum of item wieghts.]  \n" + self.header
             #stops = [ sum(weights[:i+1]) for i in range(len(weights))]
