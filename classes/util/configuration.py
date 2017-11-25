@@ -1,6 +1,5 @@
 from os import path
 import configparser
-import semver
 
 
 class Section:
@@ -17,23 +16,24 @@ class Config:
     """Singleton container wrapping configparser calls."""
     config = configparser.ConfigParser()
 
-    def __init__(self, in_file=None):
-        if in_file:
-            self.load(in_file)
-
-    @classmethod
-    def load(cls, in_file="config.ini", clear_before_load=True):
+    def __init__(self, in_file="config.ini", clear_before_load=True):
         if not path.exists(in_file):
             raise FileNotFoundError("Cannot find configuration file '{}' in the path.".format(in_file))
         if clear_before_load:
-            cls.clear()
-        cls.config.read(in_file)
+            self.clear()
+        self.config.read(in_file)
 
     @classmethod
     def clear(cls):
         cls.config.clear()
 
     @classmethod
+    def get(cls, *items):
+        c = cls.config
+        for item in items:
+            c = c[item]
+        return c
+
     def __getitem__(cls, item):
         return cls.config[item]
 

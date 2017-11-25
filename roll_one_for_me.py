@@ -2,15 +2,24 @@
 
 import logging
 from classes.reddit.endpoint import Reddit
+from classes.util.configuration import Config, get_version_string, Section
+import time
 
 
 def main():
-    load_configuration()
     Reddit.login()
     while True:
+        logging.debug("Beginning core loop.")
         answer_username_mentions()
         answer_private_messages()
         perform_sentinel_search()
+        sleep()
+
+
+def sleep():
+    sleep_interval = int(Config.get("sleep", "between_attempts"))
+    logging.debug("Sleeping for {} seconds.".format(sleep_interval))
+    time.sleep(sleep_interval)
 
 
 def answer_username_mentions():
@@ -23,6 +32,9 @@ def answer_username_mentions():
 def answer_mention(mention):
     context = Reddit.get_mention_context(mention)
 
+    while context.stack:
+        pass
+
 
 def answer_private_messages():
     logging.info("PM functionality disabled.")
@@ -34,9 +46,8 @@ def perform_sentinel_search():
     pass
 
 
-def load_configuration():
-    logging.getLogger('').setLevel(logging.DEBUG)
-    logging.info("load_configuration not implemented.")
-
 if __name__ == "__main__":
-    pass
+    Config()
+    print(get_version_string())
+    print("bye")
+    main()
