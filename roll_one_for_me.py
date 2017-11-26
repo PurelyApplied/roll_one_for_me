@@ -2,11 +2,14 @@
 
 import logging
 from classes.reddit.endpoint import Reddit
-from classes.util.configuration import Config, get_version_string, Section
+from classes.util.configuration import Config, get_version_and_updated, Section, Subsection
 import time
 
+from classes.util.decorators import static_vars
 
-def main():
+
+def main(config_file="config.ini"):
+    Config(config_file)
     Reddit.login()
     while True:
         logging.debug("Beginning core loop.")
@@ -16,12 +19,13 @@ def main():
         sleep()
 
 
+@static_vars(inverval=5)
 def sleep():
-    sleep_interval = int(Config.get("sleep", "between_attempts"))
-    logging.debug("Sleeping for {} seconds.".format(sleep_interval))
-    time.sleep(sleep_interval)
+    logging.debug("Sleeping for {} seconds.".format(sleep.interval))
+    time.sleep(sleep.interval)
 
 
+@static_vars(counter=0)
 def answer_username_mentions():
     mentions = Reddit.get_mentions()
     logging.info("Username mentions in this pass: {}".format(len(mentions)))
@@ -29,18 +33,20 @@ def answer_username_mentions():
         answer_mention(user_mention)
 
 
+@static_vars(counter=0)
 def answer_mention(mention):
     context = Reddit.get_mention_context(mention)
-
     while context.stack:
         pass
 
 
+@static_vars(counter=0)
 def answer_private_messages():
     logging.info("PM functionality disabled.")
     pass
 
 
+@static_vars(counter=0)
 def perform_sentinel_search():
     logging.info("Sentinel functionality disabled.")
     pass
@@ -48,6 +54,6 @@ def perform_sentinel_search():
 
 if __name__ == "__main__":
     Config()
-    print(get_version_string())
+    print(get_version_and_updated())
     print("bye")
     main()

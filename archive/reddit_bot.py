@@ -4,9 +4,9 @@ import praw
 
 
 ####################
-## This page: Basic Reddit access and mail fetching
+## This page: Basic reddit access and mail fetching
 class RedditBot:
-    '''Base for Reddit bot components.  Handles login, provides reddit
+    '''Base for reddit bot components.  Handles login, provides reddit
 handle at self.r.
     '''
     def __init__(self, sign_in=True, **kwargs):
@@ -16,7 +16,7 @@ handle at self.r.
             self.sign_in(**kwargs)
 
     def sign_in(self, sign_in_attempts=5, sleep_on_failure=30):
-        '''Signs into Reddit, attempting $sign_in_attempts attempts before
+        '''Signs into reddit, attempting $sign_in_attempts attempts before
 returning an error.
         '''
         for i in range(sign_in_attempts):
@@ -36,7 +36,7 @@ returning an error.
         raise RuntimeError("Could not sign in.")
 
     def _attempt_sign_in(self):
-        '''Attempt to sign into Reddit.  This function assumes a properly
+        '''Attempt to sign into reddit.  This function assumes a properly
 OAuth-configured praw.ini file.
         '''
         r = praw.Reddit(

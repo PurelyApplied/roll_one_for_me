@@ -6,10 +6,10 @@ from classes.util import configuration
 
 
 class Reddit:
-    r = None  # Static PRAW.Reddit reference
+    r = None  # Static PRAW.reddit reference
 
     def __init__(self):
-        raise NotImplementedError("The Reddit class is not intended for instantiation.")
+        raise NotImplementedError("The reddit class is not intended for instantiation.")
 
     @classmethod
     def login(cls):
@@ -30,9 +30,9 @@ class Reddit:
         s += ("*Beep boop I'm a bot.  " +
               "You can find usage and known issue details about me, as well as my source code, on " +
               "[GitHub](https://github.com/PurelyApplied/roll_one_for_me) page.  " +
-              "I am maintained by /u/PurelyApplied.*\n\n"
+              "I am written and maintained by /u/PurelyApplied.*\n\n"
               )
-        s += "\n\n^(v{}; code base last updated {})".format(configuration.version, configuration.last_updated)
+        s += "\n\n^(v{}; code base last updated {})".format(*configuration.get_version_and_updated())
         return s
 
     @classmethod

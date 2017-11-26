@@ -39,7 +39,7 @@ except:
 
 def main(debug=False):
     '''main(debug=False)
-    Logs into Reddit, looks for unanswered user mentions, and
+    Logs into reddit, looks for unanswered user mentions, and
     generates and posts replies
 
     '''
@@ -49,7 +49,7 @@ def main(debug=False):
     # Core loop
     while True:
         try:
-            logging.debug("Signing into Reddit.")
+            logging.debug("Signing into reddit.")
             r = sign_in()
             trivial_passes_count = _trivial_passes_per_heartbeat - 1
             while True:
@@ -154,7 +154,7 @@ def beep_boop():
 
 
 def sign_in() -> praw.Reddit:
-    '''Sign in to reddit using PRAW; returns Reddit handle'''
+    '''Sign in to reddit using PRAW; returns reddit handle'''
     r = praw.Reddit(
         user_agent=(
             'Generate an outcome for random tables, under the name'

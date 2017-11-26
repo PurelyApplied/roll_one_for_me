@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Implementation for Reddit bot /u/roll_one_for_me.
+"""Implementation for reddit bot /u/roll_one_for_me.
 
 Bot usage: summon with user mention to /u/roll_one_for_me, or send a
 private message.
@@ -92,7 +92,7 @@ def main(config_file,
          this_logging_level=logging.INFO,
          other_logging_level=logging.ERROR,
          ):
-    """Logs into Reddit, looks for unanswered user mentions, and
+    """Logs into reddit, looks for unanswered user mentions, and
     generates and posts replies"""
     # Initialize
     prepare_logger(logging_level)

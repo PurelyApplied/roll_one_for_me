@@ -1,9 +1,12 @@
-from os import path
 import configparser
+from enum import Enum
+from os import path
+
+import roll_one_for_me
 
 
-class Section:
-    """Enum specifying permissible keys for config.ini"""
+class Section(str, Enum):
+    """Enum specifying required keys for config.ini"""
     version = "version"
     sentinel = "sentinel"
     sleep = "sleep"
@@ -12,11 +15,46 @@ class Section:
     links = "links"
 
 
+class Subsection(str, Enum):
+    """Enum specifying required subsection keys for config.ini"""
+    # Version
+    major = "major"
+    minor = "minor"
+    patch = "patch"
+    last_updated = "last_updated"
+    # sentinel
+    fetch_limit = "fetch_limit"
+    seen_cache = "seen_cache"
+    # sleep
+    between_attempts = "between_attempts"
+    between_checks = "between_checks"
+    # attempts
+    per_user_mention = "per_user_mention"
+    per_answer_attempt = "per_answer_attempt"
+    log_in = "log_in"
+    # logging
+    internal_level = "internal_level"
+    external_level = "external_level"
+    filename = "filename"
+    format_string = "format_string"
+    max_filesize = "max_filesize"
+    backup_count = "backup_count"
+    passes_per_heartbeat = "passes_per_heartbeat"
+    # dice
+    max_n = "max_n"
+    max_k = "max_k"
+    max_compound_roll_length = "max_compound_roll_length"
+    # links
+    max_depth = "max_depth"
+
+
 class Config:
     """Singleton container wrapping configparser calls."""
     config = configparser.ConfigParser()
 
-    def __init__(self, in_file="config.ini", clear_before_load=True):
+    def __init__(self, in_file=None, clear_before_load=True):
+        if not in_file:
+            return
         if not path.exists(in_file):
             raise FileNotFoundError("Cannot find configuration file '{}' in the path.".format(in_file))
         if clear_before_load:
@@ -38,15 +76,24 @@ class Config:
         return cls.config[item]
 
 
-def get_version_string():
+def get_version_and_updated():
     info = Config()[Section.version]
     major = info.get("major")
     minor = info.get("minor")
     patch = info.get("patch")
-    return "{}.{}.{}".format(major, minor, patch)
+    version_string = "{}.{}.{}".format(major, minor, patch)
+    return version_string, Config.get(Section.version, Subsection.last_updated)
+
+
+def update_static_variables():
+    roll_one_for_me.sleep.interval = int(Config.get(Section.sleep, Subsection.between_checks))
+    pass
 
 
 if __name__ == "__main__":
-    Config(r"C:\Users\admin\PycharmProjects\x\roll_one_for_me\config.ini")
-    print(get_version_string())
+    try:
+        Config(r"C:\Users\admin\PycharmProjects\x\roll_one_for_me\config.ini")
+    except FileNotFoundError:
+        Config(r"/Users/prhomberg/personal_repos/roll_one_for_me/config.ini")
+    print(get_version_and_updated())
     pass
