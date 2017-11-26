@@ -17,45 +17,40 @@ def static_vars(**kwargs):
     return decorate
 
 
-def occasional(counter=0, trigger=0, frequency=1, log=False):
-    """Causes the decorated function to execute only with frequency @frequency.
-    Initial counter set to @counter, iterating each time the wrapped function is called.
-    Execution occurs whenever @counter % @frequency = @trigger.
+def occasional(counter=0, frequency=1):
+    """Causes the decorated function to execute only with the specified frequency, immediately returning None otherwise.
 
-    These values can be externally updated by altering func.counter, func.trigger, or func.frequency.
-    Updated values are not checked for validity."""
-    assert 0 <= counter <= trigger < frequency, "@occasional arguments must satisfy 0 < counter <= trigger < frequency"
+     :param counter:  Initial value of the internal counter at this value.
+     :param frequency: Decorated function will execute once every.
+     :return Decorated function value, or None
+     :raise AssertionError: Invalid input.
+
+    Execution occurs when counter % frequency == 0.
+    These values can be externally updated via func.counter and func.frequency.
+    Updated values are not checked for validity -- use responsibly."""
+    assert frequency >= 1, "@occasional only accepts frequency >= 1"
+    counter = counter % frequency
 
     def decorator(func):
         @wraps(func)
         def wrapped(*args, **kwargs):
-            if log:
-                logging.debug("In function '{}', counter={}, frequency={}, trigger={}".format(
-                    func, wrapped.counter, wrapped.frequency, wrapped.trigger))
             try:
-                if wrapped.counter == wrapped.trigger:
-                    if log:
-                        logging.debug("Executing wrapped function.")
+                if wrapped.counter == 0:
                     return func(*args, **kwargs)
-                else:
-                    logging.debug("Skipping wrapped function.")
             finally:
-                logging.debug("Iterating counters...")
                 wrapped.counter += 1
                 if wrapped.counter == wrapped.frequency:
-                    logging.debug("Resetting counter to zero.")
                     wrapped.counter = 0
             return None
 
         wrapped.counter = counter
-        wrapped.trigger = trigger
         wrapped.frequency = frequency
         return wrapped
 
     return decorator
 
 
-@occasional(counter=0, trigger=3, frequency=5)
+@occasional(counter=-1, frequency=5)
 def hello_world():
     logging.info("Hello world!")
 
@@ -67,7 +62,6 @@ if __name__ == "__main__":
 
     logging.info("Resetting statics to 0/1/2")
     hello_world.counter = 0
-    hello_world.trigger = 1
     hello_world.frequency = 2
     for i in range(20):
         logging.info("i = {}".format(i))

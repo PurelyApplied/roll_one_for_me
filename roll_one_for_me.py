@@ -25,7 +25,7 @@ def sleep():
     time.sleep(sleep.interval)
 
 
-@occasional(counter=0, trigger=0, frequency=1)
+@occasional(frequency=1)
 def answer_username_mentions():
     mentions = Reddit.get_mentions()
     logging.info("Username mentions in this pass: {}".format(len(mentions)))
@@ -39,13 +39,13 @@ def answer_mention(mention):
         pass
 
 
-@occasional(counter=0, trigger=0, frequency=1)
+@occasional(frequency=1)
 def answer_private_messages():
     logging.info("PM functionality disabled.")
     pass
 
 
-@occasional(counter=0, trigger=1, frequency=10)
+@occasional(counter=-1, frequency=10)
 def perform_sentinel_search():
     logging.info("Sentinel functionality disabled.")
     pass
