@@ -2,8 +2,6 @@ import configparser
 from enum import Enum
 from os import path
 
-import roll_one_for_me
-
 
 class Section(str, Enum):
     """Enum specifying required keys for config.ini"""
@@ -37,6 +35,7 @@ class Subsection(str, Enum):
     external_level = "external_level"
     filename = "filename"
     format_string = "format_string"
+    time_format = "time_format"
     max_filesize = "max_filesize"
     backup_count = "backup_count"
     passes_per_heartbeat = "passes_per_heartbeat"

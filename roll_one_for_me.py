@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import logging.handlers
 import time
 
 from classes.reddit.endpoint import Reddit
@@ -19,9 +20,9 @@ def main(config_file="config.ini"):
         sleep()
 
 
-@static_vars(inverval=5)
+@static_vars(interval=5)
 def sleep():
-    logging.debug("Sleeping for {} seconds.".format(sleep.interval))
+    logging.info("Sleeping for {} seconds.".format(sleep.interval))
     time.sleep(sleep.interval)
 
 
@@ -55,8 +56,30 @@ def update_static_variables():
     sleep.interval = int(Config.get(Section.sleep, Subsection.between_checks))
 
 
+def configure_logging():
+    logging.info("Getting logger.")
+    main_logger = logging.getLogger("")
+    main_logger.setLevel(logging.DEBUG)
+    logging.info("Getting format string")
+    format_string = Config.get(Section.logging, Subsection.format_string)
+    formatter = logging.Formatter(format_string)
+    formatter.datefmt = Config.get(Section.logging, Subsection.time_format)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(formatter)
+
+    # log_filename = Config.get(Section.logging, Subsection.filename)
+    # file_handler = logging.handlers.TimedRotatingFileHandler(filename=log_filename, when='midnight', backupCount=90)
+    # file_handler.setFormatter(formatter)
+    # file_handler.setLevel(logging.DEBUG)
+    #
+    # main_logger.addHandler(file_handler)
+    main_logger.addHandler(stream_handler)
+
+
 if __name__ == "__main__":
     sloppy_config_load()
+    configure_logging()
     sleep()
     update_static_variables()
     sleep()
