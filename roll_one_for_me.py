@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 import logging
-from classes.reddit.endpoint import Reddit
-from classes.util.configuration import Config, get_version_and_updated, Section, Subsection
 import time
 
-from classes.util.decorators import static_vars
+from classes.reddit.endpoint import Reddit
+from classes.util.configuration import Config, sloppy_config_load, Section, Subsection
+from classes.util.decorators import static_vars, occasional
 
 
 def main(config_file="config.ini"):
@@ -25,7 +25,7 @@ def sleep():
     time.sleep(sleep.interval)
 
 
-@static_vars(counter=0)
+@occasional(counter=0, trigger=0, frequency=1)
 def answer_username_mentions():
     mentions = Reddit.get_mentions()
     logging.info("Username mentions in this pass: {}".format(len(mentions)))
@@ -33,27 +33,30 @@ def answer_username_mentions():
         answer_mention(user_mention)
 
 
-@static_vars(counter=0)
 def answer_mention(mention):
     context = Reddit.get_mention_context(mention)
     while context.stack:
         pass
 
 
-@static_vars(counter=0)
+@occasional(counter=0, trigger=0, frequency=1)
 def answer_private_messages():
     logging.info("PM functionality disabled.")
     pass
 
 
-@static_vars(counter=0)
+@occasional(counter=0, trigger=1, frequency=10)
 def perform_sentinel_search():
     logging.info("Sentinel functionality disabled.")
     pass
 
 
+def update_static_variables():
+    sleep.interval = int(Config.get(Section.sleep, Subsection.between_checks))
+
+
 if __name__ == "__main__":
-    Config()
-    print(get_version_and_updated())
-    print("bye")
-    main()
+    sloppy_config_load()
+    sleep()
+    update_static_variables()
+    sleep()

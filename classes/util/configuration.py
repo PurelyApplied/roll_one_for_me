@@ -85,15 +85,13 @@ def get_version_and_updated():
     return version_string, Config.get(Section.version, Subsection.last_updated)
 
 
-def update_static_variables():
-    roll_one_for_me.sleep.interval = int(Config.get(Section.sleep, Subsection.between_checks))
-    pass
-
-
-if __name__ == "__main__":
+def sloppy_config_load():
     try:
         Config(r"C:\Users\admin\PycharmProjects\x\roll_one_for_me\config.ini")
     except FileNotFoundError:
         Config(r"/Users/prhomberg/personal_repos/roll_one_for_me/config.ini")
+
+if __name__ == "__main__":
+    sloppy_config_load()
     print(get_version_and_updated())
     pass
