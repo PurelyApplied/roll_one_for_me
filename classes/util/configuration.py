@@ -11,6 +11,7 @@ class Section(str, Enum):
     logging = "logging"
     dice = "dice"
     links = "links"
+    attempts = "attempts"
 
 
 class Subsection(str, Enum):
@@ -31,8 +32,8 @@ class Subsection(str, Enum):
     per_answer_attempt = "per_answer_attempt"
     log_in = "log_in"
     # logging
-    internal_level = "internal_level"
-    external_level = "external_level"
+    level = "level"
+    console_level = "console_level"
     filename = "filename"
     format_string = "format_string"
     time_format = "time_format"
@@ -90,7 +91,36 @@ def sloppy_config_load():
     except FileNotFoundError:
         Config(r"/Users/prhomberg/personal_repos/roll_one_for_me/config.ini")
 
+
+# noinspection PyTypeChecker
+def config_is_complete_and_concise_test():
+    sloppy_config_load()
+    config_specified_sections = list(Config.config.keys())
+    config_specified_subsections = [k for s in list(Config.config.values()) for k in s.keys()]
+
+    # Ignore "DEFAULT" section in config
+    default = {"DEFAULT"}
+    config_specified_sections = set(config_specified_sections).difference(default)
+    config_specified_subsections = set(config_specified_subsections).difference(default)
+
+    enumerated_sections = set(s.name for s in Section).difference(default)
+    enumerated_subsections = set(s.name for s in Subsection).difference(default)
+
+    sections_missing_enum = config_specified_sections.difference(enumerated_sections)
+    subsections_missing_enum = config_specified_subsections.difference(enumerated_subsections)
+
+    sections_missing_config = enumerated_sections.difference(config_specified_sections)
+    subsections_missing_config = enumerated_subsections.difference(config_specified_subsections)
+
+    assert not sections_missing_config, "sections_missing_config: {}".format(sections_missing_config)
+    assert not sections_missing_enum, "sections_missing_enum: {}".format(sections_missing_enum)
+    assert not subsections_missing_config, "subsections_missing_config: {}".format(subsections_missing_config)
+    assert not subsections_missing_enum, "subsections_missing_enum: {}".format(subsections_missing_enum)
+    # TODO
+
+
 if __name__ == "__main__":
     sloppy_config_load()
     print(get_version_and_updated())
+    config_is_complete_and_concise_test()
     pass

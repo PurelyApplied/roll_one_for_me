@@ -57,29 +57,30 @@ def update_static_variables():
 
 
 def configure_logging():
-    logging.info("Getting logger.")
-    main_logger = logging.getLogger("")
-    main_logger.setLevel(logging.DEBUG)
-    logging.info("Getting format string")
-    format_string = Config.get(Section.logging, Subsection.format_string)
-    formatter = logging.Formatter(format_string)
-    formatter.datefmt = Config.get(Section.logging, Subsection.time_format)
+    logging_config = Config.get(Section.logging)
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging_config.get(Subsection.level))
+
+    formatter = logging.Formatter(logging_config.get(Subsection.format_string))
+    formatter.datefmt = logging_config.get(Subsection.time_format)
+
     stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.INFO)
     stream_handler.setFormatter(formatter)
+    stream_handler.setLevel(logging_config.get(Subsection.console_level))
+    root_logger.addHandler(stream_handler)
 
-    # log_filename = Config.get(Section.logging, Subsection.filename)
-    # file_handler = logging.handlers.TimedRotatingFileHandler(filename=log_filename, when='midnight', backupCount=90)
-    # file_handler.setFormatter(formatter)
-    # file_handler.setLevel(logging.DEBUG)
-    #
-    # main_logger.addHandler(file_handler)
-    main_logger.addHandler(stream_handler)
-
+    log_filename = Config.get(Section.logging, Subsection.filename)
+    file_handler = logging.handlers.TimedRotatingFileHandler(filename=log_filename, when='midnight', backupCount=90)
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(logging_config.get(Subsection.level))
+    root_logger.addHandler(file_handler)
 
 if __name__ == "__main__":
     sloppy_config_load()
     configure_logging()
+    logging.debug("Here's a debug message.")
     sleep()
+    logging.debug("Again.")
     update_static_variables()
     sleep()
