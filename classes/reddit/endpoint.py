@@ -16,7 +16,7 @@ class Reddit:
         cls.r = praw.Reddit(user_agent=(
             'Generate an outcome for random tables, under the name'
             '/u/roll_one_for_me. Written and maintained by /u/PurelyApplied'),
-            site_name="login_info")
+            site_name="roll_one")
         cls.r.login(disable_warning=True)
 
     @classmethod

@@ -78,9 +78,4 @@ def configure_logging():
 
 if __name__ == "__main__":
     sloppy_config_load()
-    configure_logging()
-    logging.debug("Here's a debug message.")
-    sleep()
-    logging.debug("Again.")
-    update_static_variables()
-    sleep()
+    main("")
