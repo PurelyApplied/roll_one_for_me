@@ -34,9 +34,13 @@ class Reddit:
     def beep_boop():
         """Builds and returns reply footer "Beep Boop I'm a bot...\""""
         s = "\n\n-----\n\n"
-        s += ("*Beep boop I'm a bot.  " +
-              "You can find usage and known issue details about me, as well as my source code, on " +
-              "[GitHub](https://github.com/PurelyApplied/roll_one_for_me) page.  " +
+        s += ("*Beep boop I'm a bot.\n\n"
+              "Sorry I've been gone for a while.  "
+              "I got hit with some API changes and maybe some OAuth token decay "
+              "around the same time my author got hit by a car.  "
+              "We're both doing much better now, though.\n\n"
+              "You can find usage and known issue details about me, as well as my source code, on "
+              "[GitHub](https://github.com/PurelyApplied/roll_one_for_me) page.  "
               "I am written and maintained by /u/PurelyApplied.*\n\n"
               )
         s += "\n\n^(v{}; code base last updated {})".format(*configuration.get_version_and_updated())

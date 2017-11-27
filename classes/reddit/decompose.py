@@ -1,4 +1,27 @@
-After producing a god, try writing a quick description like it was a writing prompt.
+#!/usr/bin/env python3
+from string import punctuation, whitespace
+
+from classes.rollers.roll import ROLL_REGEX, STARTS_WITH_ROLL_REGEX
+from classes.util import get_project_root
+
+
+def text_to_tables(raw_text):
+    # Steps:
+    # - Identify any line that has a roll in it?
+    # - See if the lines that follow are enumerated or bulletted.
+    # - If they are, and if the weights sum the correct amount, build the table.
+    # - If there are rolls that don't appear to have a table to chase them... Report that?
+
+    lines = raw_text.split('\n')
+    lines_that_start_with_die_rolls = [i for i, l in enumerate(lines)
+                                       if STARTS_WITH_ROLL_REGEX.match(l.lstrip(punctuation + whitespace))]
+    pass
+
+
+def test():
+    text_to_tables(EXPLICIT)
+
+EXPLICIT="""After producing a god, try writing a quick description like it was a writing prompt.
 The categories are interpretative;
  a god symbolized by a torture device may be an S&M enthusiast or may have been tortured,
  leading to a whip or a cross.
@@ -33,7 +56,7 @@ d3 and
 
 ---
 
-d99 The god's symbol is a
+# **6d99 - 100 The god's symbol is a**
 
 1. hand holding a (roll again and combine)
 
@@ -628,3 +651,7 @@ d8 This god likes to
 6. Participate, and manifests during battles/hunts/contests (in spirit or physically)
 7. Summon mortals to the god's plane/realm/hall/domain
 8. Remain distant, and only communicates through intermediaries (angels, etc)
+"""
+
+if __name__ == "__main__":
+    test()

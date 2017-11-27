@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
+import logging
 import random
 import re
-import string
-
-import logging
+from string import punctuation, whitespace
 
 from classes.tables.table_entry import TableItem
 from classes.tables.table_outcome import TableRoll
 
-_trash = string.punctuation + string.whitespace
+_trash = punctuation + whitespace
 _header_regex = "^(\d+)?[dD](\d+)(.*)"
 _line_regex = "^(\d+)(\s*-+\s*\d+)?(.*)"
 
 
 class Table:
-    """Container for a single set of TableItem objects
-    A single post will likely contain many Table objects"""
+    @classmethod
+    def from_text(cls):
+        pass
 
     def __init__(self, roll, header, *outcomes):
         self.roll = roll
@@ -89,6 +89,11 @@ class ReflexiveTable(Table):
         return str(value)
 
 
+class NilTable(Table):
+    """Placeholder for non-table die rolls."""
+    pass
+
+
 class InlineTable(Table):
     '''A Table object whose text is parsed in one line, instead of expecting line breaks'''
 
@@ -127,4 +132,3 @@ class InlineTable(Table):
                 self.outcomes.append(TableItem(TI_text))
             except Exception as _:
                 logging.exception("Error building TableItem in inline table; item skipped.")
-
