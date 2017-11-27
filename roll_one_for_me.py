@@ -4,6 +4,8 @@ import logging
 import logging.handlers
 import time
 
+from praw.models import Comment
+
 from classes.reddit.endpoint import Reddit
 from classes.util.configuration import Config, sloppy_config_load, Section, Subsection
 from classes.util.decorators import static_vars, occasional
@@ -34,7 +36,7 @@ def answer_username_mentions():
         answer_mention(user_mention)
 
 
-def answer_mention(mention):
+def answer_mention(mention: Comment):
     context = Reddit.get_mention_context(mention)
     while context.stack:
         pass

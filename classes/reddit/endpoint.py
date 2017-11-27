@@ -4,9 +4,17 @@ import praw
 from classes.reddit.context import MentionContext
 from classes.util import configuration
 
+from praw.models.reddit.comment import Comment
+from praw.models.reddit.message import Message
+
+
+def comment_contains_username(comment: Comment):
+    return Reddit.r.user.me().name in comment.body
+
 
 class Reddit:
-    r = None  # Static PRAW.reddit reference
+    # Static PRAW.reddit reference.  Define type for IDE integration.
+    r = praw.Reddit(client_id="void", user_agent="void", client_secret="void")
 
     def __init__(self):
         raise NotImplementedError("The reddit class is not intended for instantiation.")
@@ -17,7 +25,6 @@ class Reddit:
             'Generate an outcome for random tables, under the name'
             '/u/roll_one_for_me. Written and maintained by /u/PurelyApplied'),
             site_name="roll_one")
-        cls.r.login(disable_warning=True)
 
     @classmethod
     def logout(cls):
@@ -37,7 +44,11 @@ class Reddit:
 
     @classmethod
     def get_mentions(cls) -> "user-mention generator":
-        return cls.r.get_mentions()
+        return [msg for msg in cls.r.inbox.unread() if isinstance(msg, Comment) and comment_contains_username(msg)]
+
+    @classmethod
+    def get_private_messages(cls):
+        return [msg for msg in cls.r.inbox.unread() if isinstance(msg, Message)]
 
     @classmethod
     def get_tables_from_mention(cls, mention):
