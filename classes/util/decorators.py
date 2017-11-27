@@ -2,6 +2,7 @@
 
 
 from functools import wraps
+import unittest
 
 import logging
 
@@ -50,19 +51,107 @@ def occasional(counter=0, frequency=1):
     return decorator
 
 
+# For a less application-specific decorator, see retrying.retry
+def retry(maximum_count=1,
+          execute_between_attempts: "A no-argument callable that executes on failure." = None,
+          permissible_exceptions: "default: all Exceptions are permissible." = ()):
+    def decorator(func):
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            for attempts_made in range(1, maximum_count + 1):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    logging.exception("Exception occurred in attempt {} of {} in function: {}".format(attempts_made,
+                                                                                                      maximum_count,
+                                                                                                      func))
+                    if permissible_exceptions and not any(
+                            isinstance(e, exception_type) for exception_type in permissible_exceptions):
+                        logging.error("Exception experienced is not specified as a permissible exception."
+                                      "  Rethrowing exception.")
+                        raise e
+
+                    if attempts_made < maximum_count:
+                        if execute_between_attempts:
+                            execute_between_attempts()
+                        continue
+                    logging.error("Maximum retries reached.  Rethrowing exception.")
+                    raise e
+        return wrapped
+    return decorator
+
+
 @occasional(counter=-1, frequency=5)
 def hello_world():
     logging.info("Hello world!")
 
-if __name__ == "__main__":
-    logging.getLogger('').setLevel(logging.DEBUG)
-    for i in range(20):
-        logging.info("i = {}".format(i))
-        hello_world()
 
-    logging.info("Resetting statics to 0/1/2")
-    hello_world.counter = 0
-    hello_world.frequency = 2
-    for i in range(20):
-        logging.info("i = {}".format(i))
-        hello_world()
+class DecoratorTests(unittest.TestCase):
+    def setUp(self):
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    def test_occasional(self):
+        @occasional(frequency=5)
+        def returns_one():
+            return 1
+
+        for _i in range(100):
+            if _i % 5 == 0:
+                self.assertEqual(returns_one(), 1, "Expected returns_one() to return 1")
+            else:
+                self.assertEqual(returns_one(), None, "Expected returns_one() to, ironically, return None")
+
+    def test_occasional_2(self):
+        @occasional(frequency=3, counter=-1)
+        def returns_one():
+            return 1
+
+        for _i in range(100):
+            if _i % 3 == 1:
+                self.assertEqual(returns_one(), 1, "Expected returns_one() to return 1")
+            else:
+                self.assertEqual(returns_one(), None, "Expected returns_one() to, ironically, return None")
+
+    def test_retry_eventually_succeeds(self):
+        @occasional(counter=1, frequency=5)
+        def return_one():
+            return 1
+
+        @retry(maximum_count=5)
+        def four_exceptions_then_return_one():
+            if return_one():
+                return 1
+            raise Exception("Constructed exception to test @retry.")
+
+        self.assertEqual(four_exceptions_then_return_one(), 1)
+
+    def test_retry_percolates_errors(self):
+        @occasional(counter=1, frequency=10)
+        def return_one():
+            return 1
+
+        @retry(maximum_count=5)
+        def four_exceptions_then_return_one():
+            if return_one():
+                return 1
+            raise Exception("Constructed exception to test @retry.")
+
+        with self.assertRaises(Exception):
+            four_exceptions_then_return_one()
+
+    def test_retry_only_catches_specified(self):
+        @occasional(counter=0, frequency=1)
+        def return_one():
+            return 1
+
+        @retry(maximum_count=5, execute_between_attempts=None, permissible_exceptions=(UnboundLocalError,))
+        def four_exceptions_then_return_one():
+            if return_one():
+                return 1
+            raise KeyError("Constructed KeyError exception to test @retry.")
+
+        with self.assertRaises(Exception):
+            four_exceptions_then_return_one()
+
+if __name__ == "__main__":
+    unittest.main()
