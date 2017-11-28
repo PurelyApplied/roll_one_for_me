@@ -15,6 +15,8 @@ import logging
 import os
 import time
 
+from praw.models import Message
+
 import classes.util.configuration as future_configuration
 from classes.reddit.endpoint import Reddit as FutureReddit
 from legacy.models import Request, legacy_log
@@ -54,8 +56,19 @@ def main():
             raise e
 
 
+def decline_private_messages():
+    private_messages = FutureReddit.get_private_messages()
+    pm = Message
+    for pm in private_messages:
+        apology = "I'm sorry.  PM parsing is currently borked.  I hope to have it up and running again soon."
+        reply_text = apology + "\n\n" + beep_boop()
+        pm.reply
+        pm.reply(reply_text)
+        FutureReddit.r.inbox.mark_read(pm)
+
+
 def process_mail():
-    # TODO: Still need PMs
+    decline_private_messages()
     my_mail = FutureReddit.get_mentions()
     to_process = [Request(x, FutureReddit.r) for x in my_mail]
     for item in to_process:

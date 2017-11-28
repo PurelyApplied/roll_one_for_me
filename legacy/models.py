@@ -3,8 +3,10 @@ import random
 import re
 import string
 
-from classes.reddit.endpoint import Reddit as FutureReddit
+from praw.exceptions import PRAWException
 from praw.models import Comment, Submission, Message
+
+from classes.reddit.endpoint import Reddit as FutureReddit
 
 _header_regex = "^(\d+)?[dD](\d+)(.*)"
 _line_regex = "^(\d+)(\s*-+\s*\d+)?(.*)"
@@ -297,9 +299,8 @@ class Request:
                     href = href[:href.find("reddit.com")] + 'www.' + href[href.find("reddit.com"):]
                 href = href.rstrip("/")
                 legacy_log("Processing href: {}".format(href))
-                self._maybe_add_source(
-                    self.reddit.get_submission(href),
-                    desc)
+
+                self._maybe_add_source(FutureReddit.try_to_follow_link(href), desc)
 
     def get_default_sources(self):
         """Default sources are OP and top-level comments"""
@@ -365,7 +366,15 @@ class TableSourceFromText(TableSource):
 def get_post_text(post):
     """Returns text to parse from either Comment or Submission"""
     if type(post) == Comment:
-        return post.body
+        try:
+            logging.debug("Try the body, it's fresh")
+            return post.body
+        except PRAWException:
+            logging.exception("Hopefully, I'm catching a \"Had no comment\" exception.  Convoluted to-sub thing!")
+            convoluted_id = FutureReddit.r.submission(id=post.id).id_from_url((post.id))
+            submission = FutureReddit.r.submission(convoluted_id)
+            return submission.selftext
+
     elif type(post) == Submission:
         return post.selftext
     else:

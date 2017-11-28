@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import logging
 import praw
+from praw.exceptions import PRAWException
+
 from classes.reddit.context import MentionContext
 from classes.util import configuration
 
@@ -66,6 +68,16 @@ class Reddit:
     def get_mention_context(cls, mention) -> MentionContext:
         logging.warning("get_mention_context is not implemented")
         return MentionContext({}, [])
+
+    @classmethod
+    def try_to_follow_link(cls, href):
+        try:
+            logging.debug("Attempting to follow href to comment: {}".format(href))
+            return cls.r.comment(href)
+        except PRAWException:
+            logging.debug("Comment failed.  Attempting to follow href to submission: {]".format(href))
+            return cls.r.submission(None, href)
+
 
 if __name__ == "__main__":
     Reddit.login()
