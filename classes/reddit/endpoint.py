@@ -47,6 +47,10 @@ class Reddit:
         return s
 
     @classmethod
+    def get_unread(cls):
+        return list(cls.r.inbox.unread())
+
+    @classmethod
     def get_mentions(cls) -> "user-mention generator":
         return [msg for msg in cls.r.inbox.unread() if isinstance(msg, Comment) and comment_contains_username(msg)]
 
