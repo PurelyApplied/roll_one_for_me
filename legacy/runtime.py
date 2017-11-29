@@ -62,9 +62,8 @@ def decline_private_messages():
     for pm in private_messages:
         apology = "I'm sorry.  PM parsing is currently borked.  I hope to have it up and running again soon."
         reply_text = apology + "\n\n" + beep_boop()
-        pm.reply
         pm.reply(reply_text)
-        FutureReddit.r.inbox.mark_read(pm)
+        FutureReddit.r.inbox.mark_read((pm,))
 
 
 def process_mail():
