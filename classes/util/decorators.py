@@ -18,11 +18,15 @@ def static_vars(**kwargs):
     return decorate
 
 
-def occasional(counter=0, frequency=1):
+def occasional(counter=0, frequency=1, off_cycle=None, off_args=None, off_kwargs=None, off_mirror_input=False):
     """Causes the decorated function to execute only with the specified frequency, immediately returning None otherwise.
 
      :param counter:  Initial value of the internal counter at this value.
      :param frequency: Decorated function will execute once every.
+     :param off_cycle: A function that is called when the wrapped function is skipped
+     :param off_args: *args to @off_cycle.
+     :param off_kwargs: **kwargs to @off_cycle
+     :param off_mirror_input: If True, pass *args and *kwargs to @off_cycle.  Overrides @off_args and @off_kwargs
      :return Decorated function value, or None
      :raise AssertionError: Invalid input.
 
@@ -38,6 +42,11 @@ def occasional(counter=0, frequency=1):
             try:
                 if wrapped.counter == 0:
                     return func(*args, **kwargs)
+                elif off_cycle and callable(off_cycle):
+                    if off_mirror_input:
+                        off_cycle(*args, **kwargs)
+                    else:
+                        off_cycle(*(off_args or ()), **(off_kwargs or {}))
             finally:
                 wrapped.counter += 1
                 if wrapped.counter == wrapped.frequency:

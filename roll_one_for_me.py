@@ -3,6 +3,7 @@
 import logging
 import logging.handlers
 import time
+import os.path
 
 from praw.models import Comment
 
@@ -58,11 +59,23 @@ def update_static_variables():
     sleep.interval = int(Config.get(Section.sleep, Subsection.between_checks))
 
 
+# noinspection SpellCheckingInspection
+def set_log_levels(logging_config):
+    root = logging.getLogger()
+    rofm = logging.getLogger("roll_one_for_me")
+    requests = logging.getLogger("requests")
+    prawcore = logging.getLogger("prawcore")
+
+    root.setLevel(logging.DEBUG)
+    rofm.setLevel(logging_config.get(Subsection.rofm_level))
+    requests.setLevel(logging_config.get(Subsection.requests_level))
+    prawcore.setLevel(logging_config.get(Subsection.prawcore_level))
+
+
 def configure_logging():
     logging_config = Config.get(Section.logging)
-
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging_config.get(Subsection.level))
+    set_log_levels(logging_config)
 
     formatter = logging.Formatter(logging_config.get(Subsection.format_string))
     formatter.datefmt = logging_config.get(Subsection.time_format)
@@ -72,10 +85,16 @@ def configure_logging():
     stream_handler.setLevel(logging_config.get(Subsection.console_level))
     root_logger.addHandler(stream_handler)
 
-    log_filename = Config.get(Section.logging, Subsection.filename)
+    logs_directory = Config.get(Section.logging, Subsection.logs_directory)
+    if not os.path.exists(logs_directory):
+        raise FileNotFoundError("Please create your logs directory: '{}'".format(logs_directory))
+    elif not os.path.isdir(logs_directory):
+        raise FileExistsError("Non-directory file '{}' already exists.".format(logs_directory))
+
+    log_filename = logs_directory + os.sep + Config.get(Section.logging, Subsection.filename)
     file_handler = logging.handlers.TimedRotatingFileHandler(filename=log_filename, when='midnight', backupCount=90)
     file_handler.setFormatter(formatter)
-    file_handler.setLevel(logging_config.get(Subsection.level))
+    file_handler.setLevel(logging_config.get(Subsection.file_log_level))
     root_logger.addHandler(file_handler)
 
 if __name__ == "__main__":

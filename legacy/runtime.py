@@ -58,10 +58,10 @@ def main():
 
 def decline_private_messages():
     private_messages = FutureReddit.get_private_messages()
-    pm = Message
     for pm in private_messages:
         apology = "I'm sorry.  PM parsing is currently borked.  I hope to have it up and running again soon."
         reply_text = apology + "\n\n" + beep_boop()
+        logging.info("Replying to {} with an apology declining to answer their PM.".format(pm.author))
         pm.reply(reply_text)
         FutureReddit.r.inbox.mark_read((pm,))
 

@@ -14,6 +14,7 @@ class Section(str, Enum):
     attempts = "attempts"
 
 
+# noinspection SpellCheckingInspection
 class Subsection(str, Enum):
     """Enum specifying required subsection keys for config.ini"""
     # Version
@@ -32,8 +33,12 @@ class Subsection(str, Enum):
     per_answer_attempt = "per_answer_attempt"
     log_in = "log_in"
     # logging
-    level = "level"
+    rofm_level = "rofm_level"
+    requests_level = "requests_level"
+    prawcore_level = "prawcore_level"
+    file_log_level = "file_log_level"
     console_level = "console_level"
+    logs_directory = "logs_directory"
     filename = "filename"
     format_string = "format_string"
     time_format = "time_format"
@@ -72,8 +77,8 @@ class Config:
             c = c[item]
         return c
 
-    def __getitem__(cls, item):
-        return cls.config[item]
+    def __getitem__(self, item):
+        return self.config[item]
 
 
 def get_version_and_updated():
@@ -85,6 +90,7 @@ def get_version_and_updated():
     return version_string, Config.get(Section.version, Subsection.last_updated)
 
 
+# noinspection SpellCheckingInspection
 def sloppy_config_load():
     try:
         Config(r"C:\Users\admin\PycharmProjects\x\roll_one_for_me\config.ini")
@@ -116,7 +122,6 @@ def config_is_complete_and_concise_test():
     assert not sections_missing_enum, "sections_missing_enum: {}".format(sections_missing_enum)
     assert not subsections_missing_config, "subsections_missing_config: {}".format(subsections_missing_config)
     assert not subsections_missing_enum, "subsections_missing_enum: {}".format(subsections_missing_enum)
-    # TODO
 
 
 if __name__ == "__main__":
