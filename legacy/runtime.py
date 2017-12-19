@@ -15,8 +15,6 @@ import logging
 import os
 import time
 
-from praw.models import Message
-
 import classes.util.configuration as future_configuration
 from classes.reddit.endpoint import Reddit as FutureReddit
 from legacy.models import Request, legacy_log
