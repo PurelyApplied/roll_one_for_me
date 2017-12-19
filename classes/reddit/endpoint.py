@@ -25,10 +25,7 @@ class Reddit:
 
     @classmethod
     def login(cls):
-        cls.r = praw.Reddit(user_agent=(
-            'Generate an outcome for random tables, under the name'
-            '/u/roll_one_for_me. Written and maintained by /u/PurelyApplied'),
-            site_name="roll_one")
+        cls.r = praw.Reddit(site_name="roll_one")
 
     @classmethod
     def logout(cls):

@@ -1,3 +1,1 @@
-pyparsing
-semver
-praw
+praw=4.5.1
