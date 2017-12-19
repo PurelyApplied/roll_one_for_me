@@ -1,2 +1,3 @@
 praw==4.5.1
-typing
+typing==3.6.2
+
