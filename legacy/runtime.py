@@ -33,7 +33,7 @@ _mentions_attempts = 10
 _answer_attempts = 10
 
 _sleep_on_error = 10
-_sleep_between_checks = 60
+_sleep_between_checks = 180
 
 _trivial_passes_per_heartbeat = 30
 
@@ -106,7 +106,7 @@ def beep_boop():
           "[GitHub](https://github.com/PurelyApplied/roll_one_for_me) page.  " +
           "I am maintained by /u/PurelyApplied.*\n\n"
           )
-    s += "\n\n^(v2.[-1].oh_god; code base last updated on a computer.  Probably both of those to update soon.)"
+    s += "\n\n^(v2.[-1].n++; code base last updated on a computer.  Probably both of those to update soon.)"
     return s
 
 
