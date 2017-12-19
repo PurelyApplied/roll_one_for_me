@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import logging
-from typing import List
+# from typing import List
 
 import praw
 from praw.exceptions import PRAWException
@@ -56,7 +56,8 @@ class Reddit:
         return [msg for msg in cls.r.inbox.unread() if isinstance(msg, Comment) and comment_contains_username(msg)]
 
     @classmethod
-    def get_private_messages(cls) -> List[Message]:
+    def get_private_messages(cls):
+        # def get_private_messages(cls) -> List[Message]:
         return [msg for msg in cls.r.inbox.unread() if isinstance(msg, Message)]
 
     @classmethod
