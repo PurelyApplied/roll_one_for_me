@@ -3,7 +3,6 @@ import logging
 # from typing import List
 
 import praw
-from praw.exceptions import PRAWException
 
 from classes.reddit.context import MentionContext
 from classes.util import configuration
@@ -74,7 +73,7 @@ class Reddit:
         try:
             logging.debug("Attempting to follow href to comment: {}".format(href))
             return cls.r.comment(href)
-        except PRAWException:
+        except praw.exceptions.PRAWException:
             logging.debug("Comment failed.  Attempting to follow href to submission: {]".format(href))
             return cls.r.submission(None, href)
 

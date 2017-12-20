@@ -95,7 +95,14 @@ def sloppy_config_load():
     try:
         Config(r"C:\Users\admin\PycharmProjects\x\roll_one_for_me\config.ini")
     except FileNotFoundError:
+        pass
+
+    try:
         Config(r"/Users/prhomberg/personal_repos/roll_one_for_me/config.ini")
+    except FileNotFoundError:
+        pass
+
+    Config(r"~/RofM/config.ini")
 
 
 # noinspection PyTypeChecker

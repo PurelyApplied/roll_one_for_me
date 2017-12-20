@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from string import punctuation, whitespace
-
 import logging
 
 from classes.util.multimap import multimap
