@@ -2,8 +2,8 @@
 
 import logging
 import logging.handlers
-import time
 import os.path
+import time
 
 from praw.models import Comment
 

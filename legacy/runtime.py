@@ -10,7 +10,7 @@
 
 # To add: Look for tables that are actual tables.
 # Look for keyword ROLL in tables and scan for arbitrary depth
-
+import argparse
 import logging
 import os
 import time
@@ -36,22 +36,23 @@ _sleep_between_checks = 180
 _trivial_passes_per_heartbeat = 30
 
 
-def main():
-    future_configuration.sloppy_config_load()
+def main(long_lived=True, config_file="config.ini"):
+    future_configuration.Config(config_file)
     future_config_logging()
     legacy_log("Begin main()")
-    while True:
-        try:
-            legacy_log("Signing into Reddit.")
-            sign_in_to_reddit()
-            while True:
-                process_mail()
-                legacy_log("Heartbeat.")
-                time.sleep(_sleep_between_checks)
-        except Exception as e:
-            legacy_log("Top level.  Allowing to die for cron to revive.")
-            legacy_log("Error: {}".format(e))
-            raise e
+    try:
+        legacy_log("Signing into Reddit.")
+        sign_in_to_reddit()
+        while True:
+            process_mail()
+            if not long_lived:
+                return
+            legacy_log("Heartbeat.")
+            time.sleep(_sleep_between_checks)
+    except Exception as e:
+        legacy_log("Top level.  Allowing to die for cron to revive.")
+        legacy_log("Error: {}".format(e))
+        raise e
 
 
 def decline_private_messages():
@@ -136,4 +137,12 @@ if __name__ == "__main__":
     if cwd.endswith("legacy"):
         os.chdir('..')
     print("Current working directory:", os.getcwd())
-    main()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("config", type=str,
+                        help="Path to config.ini")
+    parser.add_argument("--long-lived", dest="long_lived", action='store_true',
+                        help="Without this flag, log in and process exactly one pass.")
+
+    args = parser.parse_args()
+    main(args.long_lived, args.config)
