@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # Incoming messages will differentiate by type: Mentions are
 # praw.objects.Comment.  PM will me praw.objects.Message.  (And OP
@@ -34,7 +34,6 @@ except:
 ##################
 # Some constants #
 ##################
-
 
 
 def main(debug=False):
