@@ -10,6 +10,7 @@ from praw.models import Comment
 from classes.reddit.endpoint import Reddit
 from classes.util.configuration import Config, sloppy_config_load, Section, Subsection
 from classes.util.decorators import static_vars, occasional
+from classes.util.interactive import prompt_for_yes_no
 
 
 def main(config_file="config.ini"):
@@ -87,7 +88,10 @@ def configure_logging():
 
     logs_directory = Config.get(Section.logging, Subsection.logs_directory)
     if not os.path.exists(logs_directory):
-        raise FileNotFoundError("Please create your logs directory: '{}'".format(logs_directory))
+        if prompt_for_yes_no("Attempt to create logs directory '{}'? (current working directory: '{}')  > ".format(logs_directory, os.getcwd())):
+            os.mkdir(logs_directory)
+        else:
+            raise FileNotFoundError("Please create your logs directory: '{}'".format(logs_directory))
     elif not os.path.isdir(logs_directory):
         raise FileExistsError("Non-directory file '{}' already exists.".format(logs_directory))
 
@@ -96,6 +100,7 @@ def configure_logging():
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging_config.get(Subsection.file_log_level))
     root_logger.addHandler(file_handler)
+
 
 if __name__ == "__main__":
     sloppy_config_load()
