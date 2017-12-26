@@ -17,41 +17,28 @@ import time
 
 import classes.util.configuration as future_configuration
 from classes.reddit.endpoint import Reddit as FutureReddit
-from legacy.models import Request, legacy_log
+from legacy.models import Request
 from roll_one_for_me import configure_logging as future_config_logging
-
-##################
-# Some constants #
-##################
-# TODO: This should be a config file.
-_seen_max_len = 50
-_fetch_limit = 25
-
-_mentions_attempts = 10
-_answer_attempts = 10
-
-_sleep_on_error = 10
-_sleep_between_checks = 180
-
-_trivial_passes_per_heartbeat = 30
 
 
 def main(long_lived=True, config_file="config.ini"):
     future_configuration.Config(config_file)
+    sleep_between_checks = future_configuration.Config.get(future_configuration.Section.sleep,
+                                                           future_configuration.Subsection.between_checks)
     future_config_logging()
-    legacy_log("Begin main()")
+    logging.debug("Begin main()")
     try:
-        legacy_log("Signing into Reddit.")
+        logging.debug("Signing into Reddit.")
         sign_in_to_reddit()
         while True:
             process_mail()
             if not long_lived:
                 return
-            legacy_log("Heartbeat.")
-            time.sleep(_sleep_between_checks)
+            logging.debug("Heartbeat.")
+            time.sleep(sleep_between_checks)
     except Exception as e:
-        legacy_log("Top level.  Allowing to die for cron to revive.")
-        legacy_log("Error: {}".format(e))
+        logging.debug("Top level.  Allowing to die for cron to revive.")
+        logging.debug("Error: {}".format(e))
         raise e
 
 
@@ -86,7 +73,7 @@ def process_mail():
                 reply_text = reply_text[:clip_point] + addition + beep_boop()
             pass
             item.reply(reply_text)
-            legacy_log("{} resolving request: {}.".format(
+            logging.debug("{} resolving request: {}.".format(
                 "Successfully" if okay else "Questionably", item))
             if not okay:
                 logging.error("Something bad happened in the 'not okay' block, but I don't log anymore.")
