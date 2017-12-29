@@ -3,7 +3,9 @@ import logging
 import random
 import re
 from string import punctuation, whitespace
+from typing import Union, List, Tuple
 
+from ..rollers.roll import Roll, Throw
 from .table_entry import TableItem
 from .table_outcome import TableRoll
 
@@ -14,16 +16,8 @@ _line_regex = "^(\d+)(\s*-+\s*\d+)?(.*)"
 
 class Table:
     @classmethod
-    def from_text(cls):
+    def from_text(cls, txt):
         pass
-
-    def __init__(self, roll, header, *outcomes):
-        self.roll = roll
-        self.header = header
-        self.outcomes = outcomes
-
-    def __repr__(self):
-        return "<Table with header: {}>".format(self.text.split('\n')[0])
 
     def _parse(self):
         lines = self.text.split('\n')
@@ -33,6 +27,21 @@ class Table:
             self.roll = int(head_match.group(2))
             self.header = head_match.group(3)
         self.outcomes = [TableItem(l) for l in lines if re.search(_line_regex, l.strip(_trash))]
+
+
+class TableContainer:
+    def __init__(self, roll: Union[str, Roll, Throw], header: str,
+                 *outcomes: Union[Tuple[int, str]]):
+        """:param roll: Dice generation method by which outcomes are selected
+        :param header: Title of the table
+        :param outcomes: List of tuples"""
+        self.roll = roll if isinstance(roll, Roll) or isinstance(roll, Throw) else Throw(roll)
+        self.header = header
+        self.outcomes = list(outcomes)
+        self.outcomes.sort()
+
+    def __str__(self):
+        return "Table({}, {}, {})".format(self.roll, self.header, self.outcomes)
 
     def roll(self):
         try:

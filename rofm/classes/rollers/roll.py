@@ -6,30 +6,26 @@ from .keep import Keep
 
 ROLL_REGEX_STR = r"(\d+)?[dD](\d+)(?:([v^])(\d+))?"
 ROLL_REGEX = re.compile(ROLL_REGEX_STR)
-STARTS_WITH_ROLL_REGEX = re.compile("^" + ROLL_REGEX_STR)
+STARTS_WITH_ROLL_REGEX = re.compile(r"^" + ROLL_REGEX_STR)
 
 
 class Roll(list):
     """Wrapped list of values rolled, given a roll string, i.e. 5d4 or 4d6^3"""
     def __init__(self, s: str, sort_by=None):
         match = ROLL_REGEX.match(s)
-        n = int(match.group(1)) if match.group(1) is not None else 1
-        k = int(match.group(2))
+
+        self.n = int(match.group(1)) if match.group(1) is not None else 1
+        self.k = int(match.group(2))
         drop = match.group(3)
-        keep = match.group(4)
-        keep_partial = drop and Keep.from_char(drop) or Keep.ALL
-        keep_count = n if not drop else int(keep)
+        keep_str = match.group(4)
+        self.keep = drop and Keep.from_char(drop) or Keep.ALL
+        self.keep_count = self.n if not drop else int(keep_str)
 
-        super().__init__(random.randint(1, k) for _ in range(n))
-        self.sort(key=sort_by)
-
-        self.keep = keep_partial
-        self.keep_count = keep_count
-        self.n = n
-        self.k = k
-
-        if not 0 < keep_count <= len(self):
+        if not 0 < self.keep_count <= self.n:
             raise TypeError("Roll string '{}' would keep an invalid number of dice.".format(s))
+
+        super().__init__(random.randint(1, self.k) for _ in range(self.n))
+        self.sort(key=sort_by)
 
     def min(self):
         return self.keep_count
@@ -81,7 +77,7 @@ class Throw:
                     "".join(illegal_chars), s))
 
     def __init__(self, s: str):
-        Throw._validate(s)
+        self._validate(s)
 
         self.roll_string = s
         self.rolls = []
@@ -124,18 +120,3 @@ def _join_to_string(roll, start, end):
 
 def wrap_in_parens_if_not_empty(s, pad_before="", pad_after=""):
     return "" if not s else "{}({}){}".format(pad_before, s, pad_after)
-
-
-def parser_tst(n):
-    for i in range(n):
-        print("4d6^3 = " + str(Roll("4d6^3")))
-    for i in range(n):
-        print("d20 = " + str(Roll("d20")))
-    for i in range(n):
-        print("10d4v7 = " + str(Roll("10d4v7")))
-    for i in range(n):
-        print(Throw("4d6^3 + d20 - 10d4v7 * (1d3 - 1)"))
-    # Throw("System.run('rm -rf /')")
-
-if __name__ == "__main__":
-    parser_tst(10)
