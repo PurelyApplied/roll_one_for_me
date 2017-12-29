@@ -31,7 +31,6 @@ class Roll(list):
         super().__init__(random.randint(1, self.k) for _ in range(self.n))
         self.sort(key=sort_by)
 
-    # noinspection SpellCheckingInspection
     def reroll(self):
         super().__init__(random.randint(1, self.k) for _ in range(self.n))
 
