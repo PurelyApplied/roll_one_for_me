@@ -107,7 +107,7 @@ class Table:
                 table_roll.error("Expected {} items found {}".format(self.die, len(self.outcomes)))
             return table_roll
         except Exception as e:
-            legacy_log("Exception in Table roll ({}): {}".format(self, e))
+            logging.debug("Exception in Table roll ({}): {}".format(self, e))
             return None
 
 
@@ -153,9 +153,9 @@ class TableItem:
             try:
                 self.inline_table = InlineTable(self.outcome[die_regex.start():])
             except RuntimeError as e:
-                legacy_log("Error in inline_table parsing ; table item full text:")
-                legacy_log(self.text)
-                legacy_log(e)
+                logging.debug("Error in inline_table parsing ; table item full text:")
+                logging.debug(self.text)
+                logging.debug(e)
                 self.outcome = self.outcome[:die_regex.start()].strip(_trash)
         # this might be redundant
         self.outcome = self.outcome.strip(_trash)
@@ -189,8 +189,8 @@ class InlineTable(Table):
         while tail:
             in_match = re.search(_line_regex, tail.strip(_trash))
             if not in_match:
-                legacy_log("Could not complete parsing InlineTable; in_match did not catch.")
-                legacy_log("Returning blank roll area.")
+                logging.debug("Could not complete parsing InlineTable; in_match did not catch.")
+                logging.debug("Returning blank roll area.")
                 self.outcomes = [TableItem("1-{}. N/A".format(self.die))]
                 return
             this_out = in_match.group(3)
@@ -287,18 +287,18 @@ class Request:
             desc, href = re.search("\[(.*?)\]\s*\((.*?)\)", item).groups()
             href = href.strip()
             if "reddit.com" in href.lower():
-                legacy_log("Fetching href: {}".format(href.lower()))
+                logging.debug("Fetching href: {}".format(href.lower()))
                 if "m.reddit" in href.lower():
-                    legacy_log("Removing mobile 'm.'")
+                    logging.debug("Removing mobile 'm.'")
                     href = href.lower().replace("m.reddit", "reddit", 1)
                 if ".json" in href.lower():
-                    legacy_log("Pruning .json and anything beyond.")
+                    logging.debug("Pruning .json and anything beyond.")
                     href = href[:href.find('.json')]
                 if 'www' not in href.lower():
-                    legacy_log("Injecting 'www.' to href")
+                    logging.debug("Injecting 'www.' to href")
                     href = href[:href.find("reddit.com")] + 'www.' + href[href.find("reddit.com"):]
                 href = href.rstrip("/")
-                legacy_log("Processing href: {}".format(href))
+                logging.debug("Processing href: {}".format(href))
 
                 self._maybe_add_source(FutureReddit.try_to_follow_link(href), desc)
 
@@ -312,7 +312,7 @@ class Request:
             for item in top_level_comments:
                 self._maybe_add_source(item, "[this]({}) comment by {}".format(item.permalink, item.author))
         except:
-            legacy_log("Could not add default sources.  (PM without links?)")
+            logging.debug("Could not add default sources.  (PM without links?)")
 
     def roll(self):
         instance = [TS.roll() for TS in self.tables_sources]
@@ -378,12 +378,7 @@ def get_post_text(post):
     elif type(post) == Submission:
         return post.selftext
     else:
-        legacy_log("Attempt to get post text from"
-                   " non-Comment / non-Submission post; returning empty string")
+        logging.debug("Attempt to get post text from"
+                      " non-Comment / non-Submission post; returning empty string")
         return ""
-
-
-def legacy_log(l):
-    logging.debug(l)
-
 
