@@ -37,6 +37,7 @@ def occasional(counter=0, frequency=1, off_cycle=None, off_args=None, off_kwargs
 
     def decorator(func):
         @wraps(func)
+        @static_vars(counter=counter, frequency=frequency)
         def wrapped(*args, **kwargs):
             try:
                 if wrapped.counter == 0:
@@ -47,15 +48,9 @@ def occasional(counter=0, frequency=1, off_cycle=None, off_args=None, off_kwargs
                     else:
                         off_cycle(*(off_args or ()), **(off_kwargs or {}))
             finally:
-                wrapped.counter += 1
-                if wrapped.counter == wrapped.frequency:
-                    wrapped.counter = 0
+                wrapped.counter = (wrapped.counter + 1) % wrapped.frequency
             return None
-
-        wrapped.counter = counter
-        wrapped.frequency = frequency
         return wrapped
-
     return decorator
 
 
