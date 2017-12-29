@@ -2,7 +2,7 @@
 
 import logging
 
-from classes.util.multimap import multimap
+from experimental.multimap import multimap
 
 
 def sanitize(s: str):

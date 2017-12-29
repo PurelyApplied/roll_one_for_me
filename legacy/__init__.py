@@ -1,1 +1,1 @@
-import legacy.models
+from . import models

@@ -1,3 +1,3 @@
-import classes.util.configuration
-import classes.util.decorators
-import classes.util.interactive
+from . import configuration
+from . import decorators
+from . import interactive

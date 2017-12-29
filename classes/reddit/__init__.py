@@ -1,4 +1,2 @@
-import classes.reddit.context
-import classes.reddit.endpoint
-
-__all__ = ["context", "endpoint"]
+from . import context
+from . import endpoint
