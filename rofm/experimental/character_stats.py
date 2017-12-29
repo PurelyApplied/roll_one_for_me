@@ -1,4 +1,4 @@
-from classes.rollers.roll import Roll
+from rofm.classes import Roll
 
 
 def point_buy():

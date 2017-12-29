@@ -7,10 +7,10 @@ import time
 
 from praw.models import Comment
 
-from .classes.reddit.endpoint import Reddit
-from .classes.util.configuration import Config, sloppy_config_load, Section, Subsection
-from .classes.util.decorators import static_vars, occasional
-from .classes.util.interactive import prompt_for_yes_no
+from rofm.classes.reddit.endpoint import Reddit
+from rofm.classes.util.configuration import Config, sloppy_config_load, Section, Subsection
+from rofm.classes.util.decorators import static_vars, occasional
+from rofm.classes.util.interactive import prompt_for_yes_no
 
 
 def main(config_file="config.ini"):

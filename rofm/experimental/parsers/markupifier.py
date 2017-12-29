@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from classes.rollers.roll import Roll
+from rofm.classes import Roll
 
 
 def display_roll(roll: Roll):

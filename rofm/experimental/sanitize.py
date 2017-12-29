@@ -2,7 +2,7 @@
 
 import logging
 
-from experimental.multimap import multimap
+from rofm.experimental.multimap import multimap
 
 
 def sanitize(s: str):

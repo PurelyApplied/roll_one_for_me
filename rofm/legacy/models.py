@@ -6,7 +6,7 @@ import string
 from praw.exceptions import PRAWException
 from praw.models import Comment, Submission, Message
 
-from classes.reddit.endpoint import Reddit as FutureReddit
+from ..classes.reddit.endpoint import Reddit as FutureReddit
 
 _header_regex = "^(\d+)?[dD](\d+)(.*)"
 _line_regex = "^(\d+)(\s*-+\s*\d+)?(.*)"

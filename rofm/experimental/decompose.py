@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from string import punctuation, whitespace
 
-from classes.rollers.roll import STARTS_WITH_ROLL_REGEX
+from rofm.classes import STARTS_WITH_ROLL_REGEX
 
 
 def text_to_tables(raw_text):

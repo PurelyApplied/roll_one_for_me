@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from classes.tables.table import Table
+from rofm.classes import Table
 
 
 def table_to_json(table: Table):

@@ -10,15 +10,13 @@
 
 # To add: Look for tables that are actual tables.
 # Look for keyword ROLL in tables and scan for arbitrary depth
-import argparse
 import logging
-import os
 import time
 
 from .models import Request
 from ..classes.reddit.endpoint import Reddit as FutureReddit
 from ..classes.util import configuration  as future_configuration
-from ..roll_one_for_me import configure_logging as future_config_logging
+from roll_one_for_me import configure_logging as future_config_logging
 
 
 def main(long_lived=True, config_file="config.ini"):
@@ -118,19 +116,3 @@ _test_table = "https://www.reddit.com/r/DnDBehindTheScreen/comments/4aqi2l/fashi
 # noinspection SpellCheckingInspection
 _test_request = "https://www.reddit.com/r/DnDBehindTheScreen/comments/4aqi2l/fashion_and_style/d12wero"
 T = "This has a d12 1 one 2 two 3 thr 4 fou 5-6 fiv/six 7 sev 8 eig 9 nin 10 ten 11 ele 12 twe"
-
-if __name__ == "__main__":
-    cwd = os.getcwd()
-    if cwd.endswith("legacy"):
-        os.chdir('..')
-    print("Current working directory:", os.getcwd())
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str,
-                        help="Path to config.ini",
-                        default="config.ini")
-    parser.add_argument("--long-lived", dest="long_lived", action='store_true',
-                        help="Without this flag, log in and process exactly one pass.")
-
-    args = parser.parse_args()
-    main(args.long_lived, args.config)

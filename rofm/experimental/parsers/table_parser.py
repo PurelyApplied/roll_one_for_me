@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from classes.tables import Table
-from experimental.text import Text
+
+from rofm.experimental.text import Text
 
 
 def identify_tables(text: Text) -> list:
