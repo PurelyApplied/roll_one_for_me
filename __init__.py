@@ -1,2 +1,2 @@
-import classes
-import legacy
+from . import classes
+from . import legacy

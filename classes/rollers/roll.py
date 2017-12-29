@@ -2,7 +2,7 @@
 import random
 import re
 
-from classes.rollers.keep import Keep
+from .keep import Keep
 
 ROLL_REGEX_STR = r"(\d+)?[dD](\d+)(?:([v^])(\d+))?"
 ROLL_REGEX = re.compile(ROLL_REGEX_STR)

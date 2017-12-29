@@ -4,8 +4,8 @@ import random
 import re
 from string import punctuation, whitespace
 
-from classes.tables.table_entry import TableItem
-from classes.tables.table_outcome import TableRoll
+from .table_entry import TableItem
+from .table_outcome import TableRoll
 
 _trash = punctuation + whitespace
 _header_regex = "^(\d+)?[dD](\d+)(.*)"

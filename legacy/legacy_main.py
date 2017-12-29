@@ -15,10 +15,10 @@ import logging
 import os
 import time
 
-import classes.util.configuration as future_configuration
-from classes.reddit.endpoint import Reddit as FutureReddit
-from legacy.models import Request
-from roll_one_for_me import configure_logging as future_config_logging
+from .models import Request
+from ..classes.reddit.endpoint import Reddit as FutureReddit
+from ..classes.util import configuration  as future_configuration
+from ..roll_one_for_me import configure_logging as future_config_logging
 
 
 def main(long_lived=True, config_file="config.ini"):

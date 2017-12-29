@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 import logging
-# from typing import List
 
 import praw
-
-from classes.reddit.context import MentionContext
-from classes.util import configuration
-
 from praw.models.reddit.comment import Comment
 from praw.models.reddit.message import Message
+
+from .context import MentionContext
+from ..util import configuration
+
+
+# from typing import List
 
 
 def comment_contains_username(comment: Comment):
