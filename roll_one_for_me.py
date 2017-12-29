@@ -8,15 +8,17 @@ import time
 from praw.models import Comment
 
 from rofm.classes.reddit.endpoint import Reddit
-from rofm.classes.util.configuration import Config, sloppy_config_load, Section, Subsection
+from rofm.classes.util.configuration import Config, Section, Subsection
 from rofm.classes.util.decorators import static_vars, occasional
 from rofm.classes.util.interactive import prompt_for_yes_no
 
 
-def main(config_file="config.ini"):
+def main(long_lived=True, config_file="config.ini"):
     Config(config_file)
     Reddit.login()
-    while True:
+    first_pass = True
+    while long_lived or first_pass:
+        first_pass = False
         logging.debug("Beginning core loop.")
         answer_username_mentions()
         answer_private_messages()
@@ -30,7 +32,6 @@ def sleep():
     time.sleep(sleep.interval)
 
 
-@occasional(frequency=1)
 def answer_username_mentions():
     mentions = Reddit.get_mentions()
     logging.info("Username mentions in this pass: {}".format(len(mentions)))
@@ -44,7 +45,6 @@ def answer_mention(mention: Comment):
         pass
 
 
-@occasional(frequency=1)
 def answer_private_messages():
     logging.info("PM functionality disabled.")
     pass
@@ -103,5 +103,4 @@ def configure_logging():
 
 
 if __name__ == "__main__":
-    sloppy_config_load()
-    main("")
+    main()

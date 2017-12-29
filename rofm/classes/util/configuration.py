@@ -1,6 +1,40 @@
 import configparser
+import logging
 from enum import Enum
 from os import path
+
+
+class Config:
+    """Singleton container wrapping configparser calls."""
+    config = configparser.ConfigParser()
+
+    def __init__(self, in_file=None, clear_before_load=True):
+        self.in_file = in_file
+        self.cleared_before_loading = clear_before_load
+
+        logging.debug("Loading configuration: {}".format(self))
+        if not path.exists(in_file):
+            raise FileNotFoundError("Cannot find configuration file '{}' in the path.".format(in_file))
+        if clear_before_load:
+            self.clear()
+        self.config.read(in_file)
+
+    def __str__(self):
+        return "Config({}, {})".format(self.in_file, self.cleared_before_loading)
+
+    @classmethod
+    def clear(cls):
+        cls.config.clear()
+
+    @classmethod
+    def get(cls, *items):
+        c = cls.config
+        for item in items:
+            c = c[item]
+        return c
+
+    def __getitem__(self, item):
+        return self.config[item]
 
 
 class Section(str, Enum):
@@ -53,34 +87,6 @@ class Subsection(str, Enum):
     max_depth = "max_depth"
 
 
-class Config:
-    """Singleton container wrapping configparser calls."""
-    config = configparser.ConfigParser()
-
-    def __init__(self, in_file=None, clear_before_load=True):
-        if not in_file:
-            return
-        if not path.exists(in_file):
-            raise FileNotFoundError("Cannot find configuration file '{}' in the path.".format(in_file))
-        if clear_before_load:
-            self.clear()
-        self.config.read(in_file)
-
-    @classmethod
-    def clear(cls):
-        cls.config.clear()
-
-    @classmethod
-    def get(cls, *items):
-        c = cls.config
-        for item in items:
-            c = c[item]
-        return c
-
-    def __getitem__(self, item):
-        return self.config[item]
-
-
 def get_version_and_updated():
     info = Config()[Section.version]
     major = info.get("major")
@@ -94,36 +100,3 @@ def get_version_and_updated():
 def sloppy_config_load():
     # It should be somewhere on the path.  Later, I'll pass it as a parameter properly.
     Config(r"config.ini")
-
-
-# noinspection PyTypeChecker
-def config_is_complete_and_concise_test():
-    sloppy_config_load()
-    config_specified_sections = list(Config.config.keys())
-    config_specified_subsections = [k for s in list(Config.config.values()) for k in s.keys()]
-
-    # Ignore "DEFAULT" section in config
-    default = {"DEFAULT"}
-    config_specified_sections = set(config_specified_sections).difference(default)
-    config_specified_subsections = set(config_specified_subsections).difference(default)
-
-    enumerated_sections = set(s.name for s in Section).difference(default)
-    enumerated_subsections = set(s.name for s in Subsection).difference(default)
-
-    sections_missing_enum = config_specified_sections.difference(enumerated_sections)
-    subsections_missing_enum = config_specified_subsections.difference(enumerated_subsections)
-
-    sections_missing_config = enumerated_sections.difference(config_specified_sections)
-    subsections_missing_config = enumerated_subsections.difference(config_specified_subsections)
-
-    assert not sections_missing_config, "sections_missing_config: {}".format(sections_missing_config)
-    assert not sections_missing_enum, "sections_missing_enum: {}".format(sections_missing_enum)
-    assert not subsections_missing_config, "subsections_missing_config: {}".format(subsections_missing_config)
-    assert not subsections_missing_enum, "subsections_missing_enum: {}".format(subsections_missing_enum)
-
-
-if __name__ == "__main__":
-    sloppy_config_load()
-    print(get_version_and_updated())
-    config_is_complete_and_concise_test()
-    pass
