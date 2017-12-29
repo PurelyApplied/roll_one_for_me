@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
 
-from functools import wraps
-import unittest
-
 import logging
+import unittest
+from functools import wraps
 
 
 def static_vars(**kwargs):

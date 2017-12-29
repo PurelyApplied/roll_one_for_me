@@ -1,9 +1,9 @@
 """A dice parser that is more cumbersome but more responsive than the
 module available in pypi.dice"""
 
-import random
-import operator
 import logging
+import operator
+import random
 
 _OPERATOR_MAP = {"+": operator.add,
                  "-": operator.sub,
