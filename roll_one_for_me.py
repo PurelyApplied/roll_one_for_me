@@ -18,12 +18,19 @@ def main(long_lived=True, config_file="config.ini"):
     Reddit.login()
     first_pass = True
     while long_lived or first_pass:
+        logging.debug("Begin core loop.")
         first_pass = False
-        logging.debug("Beginning core loop.")
         answer_username_mentions()
         answer_private_messages()
         perform_sentinel_search()
+        heartbeat()
         sleep()
+
+
+@occasional(frequency=15)
+def heartbeat():
+    logging.debug("A heart is beating and all is well.")
+    pass
 
 
 @static_vars(interval=5)
@@ -57,7 +64,8 @@ def perform_sentinel_search():
 
 
 def update_static_variables():
-    sleep.interval = int(Config.get(Section.sleep, Subsection.between_checks))
+    sleep.interval = int(Config.get(Section.interim, Subsection.sleep_between_checks))
+    heartbeat.frequency = int(Config.get(Section.interim, Subsection.passes_between_heartbeats))
 
 
 # noinspection SpellCheckingInspection

@@ -17,8 +17,8 @@ def get_default_config(**kwargs):
     topsecret['ForwardX11'] = 'no'  # same here
     config['DEFAULT']['ForwardX11'] = 'yes'
 
-    config['sleep']={}
-    config['sleep']['between_passes'] = "15 # seconds"
+    config['interim']={}
+    config['interim']['between_passes'] = "15 # seconds"
     return config
 
 

@@ -41,7 +41,7 @@ class Section(str, Enum):
     """Enum specifying required keys for config.ini"""
     version = "version"
     sentinel = "sentinel"
-    sleep = "sleep"
+    interim = "interim"
     logging = "logging"
     dice = "dice"
     links = "links"
@@ -59,9 +59,10 @@ class Subsection(str, Enum):
     # sentinel
     fetch_limit = "fetch_limit"
     seen_cache = "seen_cache"
-    # sleep
-    between_attempts = "between_attempts"
-    between_checks = "between_checks"
+    # interim
+    sleep_between_attempts = "sleep_between_attempts"
+    sleep_between_checks = "sleep_between_checks"
+    passes_between_heartbeats = "passes_between_heartbeats"
     # attempts
     per_user_mention = "per_user_mention"
     per_answer_attempt = "per_answer_attempt"

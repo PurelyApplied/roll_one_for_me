@@ -21,8 +21,8 @@ from ..classes.util import configuration  as future_configuration
 
 def main(long_lived=True, config_file="config.ini"):
     future_configuration.Config(config_file)
-    sleep_between_checks = future_configuration.Config.get(future_configuration.Section.sleep,
-                                                           future_configuration.Subsection.between_checks)
+    sleep_between_checks = future_configuration.Config.get(future_configuration.Section.interim,
+                                                           future_configuration.Subsection.sleep_between_checks)
     future_config_logging()
     logging.debug("Begin main()")
     try:
