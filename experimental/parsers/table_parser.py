@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from classes.tables import Table
-from classes.utils.text import Text
+from experimental.text import Text
 
 
 def identify_tables(text: Text) -> list:
