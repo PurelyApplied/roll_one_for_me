@@ -20,9 +20,11 @@ def main(long_lived=True, config_file="config.ini"):
     while long_lived or first_pass:
         logging.debug("Begin core loop.")
         first_pass = False
+
         answer_username_mentions()
         answer_private_messages()
         perform_sentinel_search()
+
         heartbeat()
         sleep()
 
@@ -64,8 +66,12 @@ def perform_sentinel_search():
 
 
 def update_static_variables():
-    sleep.interval = int(Config.get(Section.interim, Subsection.sleep_between_checks))
-    heartbeat.frequency = int(Config.get(Section.interim, Subsection.passes_between_heartbeats))
+    interim = Config.get(Section.interim)
+    sentinel = Config.get(Section.sentinel)
+
+    sleep.interval = int(interim.get(Subsection.sleep_between_checks))
+    heartbeat.frequency = int(interim.get(Subsection.passes_between_heartbeats))
+    perform_sentinel_search.frequency = int(sentinel.get(Subsection.frequency))
 
 
 # noinspection SpellCheckingInspection

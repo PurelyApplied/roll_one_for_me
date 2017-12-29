@@ -59,6 +59,7 @@ class Subsection(str, Enum):
     # sentinel
     fetch_limit = "fetch_limit"
     seen_cache = "seen_cache"
+    frequency = "frequency"
     # interim
     sleep_between_attempts = "sleep_between_attempts"
     sleep_between_checks = "sleep_between_checks"
