@@ -47,10 +47,11 @@ class Roll(list):
         if self.n == 1:
             return str(self.value())
 
-        start, end = self._get_sections()
-        bottom_dropped_dice = wrap_in_parens_if_not_empty(_join_to_string(self, 0, start), pad_after=" ")
-        kept_dice = _join_to_string(self, start, end)
-        top_dropped_dice = wrap_in_parens_if_not_empty(_join_to_string(self, end, len(self)), pad_before=" ")
+        # WARNING: This is predicated on the roll being sorted increasingly.
+        kept_start, kept_end = self._get_kept_range()
+        bottom_dropped_dice = wrap_in_parens_if_not_empty(_join_to_string(self, 0, kept_start), pad_after=" ")
+        kept_dice = _join_to_string(self, kept_start, kept_end)
+        top_dropped_dice = wrap_in_parens_if_not_empty(_join_to_string(self, kept_end, len(self)), pad_before=" ")
 
         return "[{}{}{}] -> {}".format(
             bottom_dropped_dice,
@@ -58,7 +59,7 @@ class Roll(list):
             top_dropped_dice,
             self.value())
 
-    def _get_sections(self):
+    def _get_kept_range(self):
         """Returns indices defining the range of dice kept.
         e.g., 4d6^3 -> [1, 4, 5, 6] will return the tuple (1, 4)"""
         start = 0 if self.keep != Keep.TOP else len(self) - self.keep_count
@@ -66,7 +67,7 @@ class Roll(list):
         return start, end
 
     def value(self):
-        return sum(self[i] for i in range(*self._get_sections()))
+        return sum(self[i] for i in range(*self._get_kept_range()))
 
     def _validate(self):
         if not 0 < self.keep_count <= self.n:
