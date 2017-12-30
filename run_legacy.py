@@ -1,23 +1,16 @@
 #!/usr/bin/env python3
 
 import argparse
-import os
 
 from rofm.legacy.legacy_main import main
 
 if __name__ == '__main__':
-    if __name__ == "__main__":
-        cwd = os.getcwd()
-        if cwd.endswith("legacy"):
-            os.chdir('..')
-        print("Current working directory:", os.getcwd())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=str,
+                        help="Path to config.ini",
+                        default="config.ini")
+    parser.add_argument("--long-lived", dest="long_lived", action='store_true',
+                        help="Without this flag, log in and process exactly one pass.")
 
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--config", type=str,
-                            help="Path to config.ini",
-                            default="config.ini")
-        parser.add_argument("--long-lived", dest="long_lived", action='store_true',
-                            help="Without this flag, log in and process exactly one pass.")
-
-        args = parser.parse_args()
-        main(args.long_lived, args.config)
+    args = parser.parse_args()
+    main(args.long_lived, args.config)

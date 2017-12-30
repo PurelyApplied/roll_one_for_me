@@ -13,17 +13,17 @@
 import logging
 import time
 
-from roll_one_for_me import configure_logging as future_config_logging
 from .models import Request
 from ..classes.reddit.endpoint import Reddit as FutureReddit
-from ..classes.util import configuration  as future_configuration
+from ..classes.util import configuration as future_configuration
 
 
 def main(long_lived=True, config_file="config.ini"):
     future_configuration.Config(config_file)
+    future_configuration.configure_logging()
+    logging.debug("Configuration loaded: '{}'.".format(future_configuration.Config()))
     sleep_between_checks = future_configuration.Config.get(future_configuration.Section.interim,
                                                            future_configuration.Subsection.sleep_between_checks)
-    future_config_logging()
     logging.debug("Begin main()")
     try:
         logging.debug("Signing into Reddit.")

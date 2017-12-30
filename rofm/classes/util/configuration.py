@@ -1,30 +1,37 @@
 import configparser
 import logging
+import logging.handlers
+import os.path
 from enum import Enum
 from os import path
+
+from rofm.classes.util.interactive import prompt_for_yes_no
 
 
 class Config:
     """Singleton container wrapping configparser calls."""
     config = configparser.ConfigParser()
+    files_loaded = []
 
-    def __init__(self, in_file=None, clear_before_load=True):
-        self.in_file = in_file
-        self.cleared_before_loading = clear_before_load
-
-        logging.debug("Loading configuration: {}".format(self))
-        if not path.exists(in_file):
-            raise FileNotFoundError("Cannot find configuration file '{}' in the path.".format(in_file))
+    @classmethod
+    def __init__(cls, *in_files, clear_before_load=False):
         if clear_before_load:
-            self.clear()
-        self.config.read(in_file)
+            cls.config.clear()
+            cls.files_loaded = []
 
-    def __str__(self):
-        return "Config({}, {})".format(self.in_file, self.cleared_before_loading)
+        for f in in_files:
+            cls.load_file(f)
+
+    @classmethod
+    def __str__(cls):
+        # noinspection SpellCheckingInspection
+        fillable = ", ".join(["{!r}"] * len(cls.files_loaded))
+        return "Config({})".format(fillable.format(*cls.files_loaded))
 
     @classmethod
     def clear(cls):
         cls.config.clear()
+        cls.files_loaded = []
 
     @classmethod
     def get(cls, *items):
@@ -35,6 +42,13 @@ class Config:
 
     def __getitem__(self, item):
         return self.config[item]
+
+    @classmethod
+    def load_file(cls, f):
+        if not path.exists(f):
+            raise FileNotFoundError("Cannot find configuration file '{}'.".format(f))
+        cls.files_loaded.append(f)
+        cls.config.read(f)
 
 
 class Section(str, Enum):
@@ -98,7 +112,43 @@ def get_version_and_updated():
     return version_string, Config.get(Section.version, Subsection.last_updated)
 
 
+def configure_logging():
+    logging_config = Config.get(Section.logging)
+    root_logger = logging.getLogger()
+    set_log_levels(logging_config)
+
+    formatter = logging.Formatter(logging_config.get(Subsection.format_string))
+    formatter.datefmt = logging_config.get(Subsection.time_format)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    stream_handler.setLevel(logging_config.get(Subsection.console_level))
+    root_logger.addHandler(stream_handler)
+
+    logs_directory = Config.get(Section.logging, Subsection.logs_directory)
+    if not os.path.exists(logs_directory):
+        if prompt_for_yes_no("Attempt to create logs directory '{}'? (current working directory: '{}')  > ".format(logs_directory, os.getcwd())):
+            os.mkdir(logs_directory)
+        else:
+            raise FileNotFoundError("Please create your logs directory: '{}'".format(logs_directory))
+    elif not os.path.isdir(logs_directory):
+        raise FileExistsError("Non-directory file '{}' already exists.".format(logs_directory))
+
+    log_filename = logs_directory + os.sep + Config.get(Section.logging, Subsection.filename)
+    file_handler = logging.handlers.TimedRotatingFileHandler(filename=log_filename, when='midnight', backupCount=90)
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(logging_config.get(Subsection.file_log_level))
+    root_logger.addHandler(file_handler)
+
+
 # noinspection SpellCheckingInspection
-def sloppy_config_load():
-    # It should be somewhere on the path.  Later, I'll pass it as a parameter properly.
-    Config(r"config.ini")
+def set_log_levels(logging_config):
+    root = logging.getLogger()
+    rofm = logging.getLogger("roll_one_for_me")
+    requests = logging.getLogger("requests")
+    prawcore = logging.getLogger("prawcore")
+
+    root.setLevel(logging.DEBUG)
+    rofm.setLevel(logging_config.get(Subsection.rofm_level))
+    requests.setLevel(logging_config.get(Subsection.requests_level))
+    prawcore.setLevel(logging_config.get(Subsection.prawcore_level))

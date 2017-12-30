@@ -2,7 +2,6 @@
 
 import logging
 import logging.handlers
-import os.path
 import time
 
 from praw.models import Comment
@@ -10,7 +9,6 @@ from praw.models import Comment
 from rofm.classes.reddit.endpoint import Reddit
 from rofm.classes.util.configuration import Config, Section, Subsection
 from rofm.classes.util.decorators import static_vars, occasional
-from rofm.classes.util.interactive import prompt_for_yes_no
 
 
 def main(long_lived=True, config_file="config.ini"):
@@ -72,48 +70,6 @@ def update_static_variables():
     sleep.interval = int(interim.get(Subsection.sleep_between_checks))
     heartbeat.frequency = int(interim.get(Subsection.passes_between_heartbeats))
     perform_sentinel_search.frequency = int(sentinel.get(Subsection.frequency))
-
-
-# noinspection SpellCheckingInspection
-def set_log_levels(logging_config):
-    root = logging.getLogger()
-    rofm = logging.getLogger("roll_one_for_me")
-    requests = logging.getLogger("requests")
-    prawcore = logging.getLogger("prawcore")
-
-    root.setLevel(logging.DEBUG)
-    rofm.setLevel(logging_config.get(Subsection.rofm_level))
-    requests.setLevel(logging_config.get(Subsection.requests_level))
-    prawcore.setLevel(logging_config.get(Subsection.prawcore_level))
-
-
-def configure_logging():
-    logging_config = Config.get(Section.logging)
-    root_logger = logging.getLogger()
-    set_log_levels(logging_config)
-
-    formatter = logging.Formatter(logging_config.get(Subsection.format_string))
-    formatter.datefmt = logging_config.get(Subsection.time_format)
-
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-    stream_handler.setLevel(logging_config.get(Subsection.console_level))
-    root_logger.addHandler(stream_handler)
-
-    logs_directory = Config.get(Section.logging, Subsection.logs_directory)
-    if not os.path.exists(logs_directory):
-        if prompt_for_yes_no("Attempt to create logs directory '{}'? (current working directory: '{}')  > ".format(logs_directory, os.getcwd())):
-            os.mkdir(logs_directory)
-        else:
-            raise FileNotFoundError("Please create your logs directory: '{}'".format(logs_directory))
-    elif not os.path.isdir(logs_directory):
-        raise FileExistsError("Non-directory file '{}' already exists.".format(logs_directory))
-
-    log_filename = logs_directory + os.sep + Config.get(Section.logging, Subsection.filename)
-    file_handler = logging.handlers.TimedRotatingFileHandler(filename=log_filename, when='midnight', backupCount=90)
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(logging_config.get(Subsection.file_log_level))
-    root_logger.addHandler(file_handler)
 
 
 if __name__ == "__main__":
