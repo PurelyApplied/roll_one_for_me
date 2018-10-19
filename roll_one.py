@@ -11,7 +11,6 @@
 # To add: Look for tables that are actual tables.
 # Look for keyword ROLL in tables and scan for arbitrary depth
 
-import praw
 import sys
 import os
 import time
@@ -19,7 +18,10 @@ import random
 import re
 import string
 import pickle
-from pprint import pprint  #for debugging / live testing
+from pprint import pprint  # for debugging / live testing
+
+import praw
+
 
 try:
     full_path = os.path.abspath(__file__)
@@ -32,11 +34,11 @@ except:
 # Some constants #
 ##################
 # TODO: This should be a config file.
-_version="1.4.1"
-_last_updated="2016-04-18"
+_version = "1.4.1"
+_last_updated = "2016-04-18"
 
 _seen_max_len = 50
-_fetch_limit=25
+_fetch_limit = 25
 
 _trash = string.punctuation + string.whitespace
 
@@ -54,17 +56,17 @@ _log_dir = "./logs"
 
 _trivial_passes_per_heartbeat = 30
 
+
 # Log print
-def lprint(l):
+def lprint(log):
     '''Prints, prepending time to message'''
-    print("{}: {}".format(time.strftime("%y %m (%b) %d (%a) %H:%M:%S"), l))
+    print("{}: {}".format(time.strftime("%y %m (%b) %d (%a) %H:%M:%S"), log))
 
 
 def main(debug=False):
     '''main(debug=False)
     Logs into Reddit, looks for unanswered user mentions, and
     generates and posts replies
-
     '''
     # Initialize
     lprint("Begin main()")
@@ -100,7 +102,6 @@ def scan_submissions(seen, r):
       table rolls be performed there for readability
     # * Update list of seen tables
     # * Prune seen tables list if large.
-
     '''
     try:
         keep_it_tidy_reply = (
@@ -108,7 +109,7 @@ def scan_submissions(seen, r):
             "  To keep things tidy and not detract from actual discussion"
             " of these tables, please make your /u/roll_one_for_me requests"
             " as children to this comment." +
-            BeepBoop() )
+            BeepBoop())
         BtS = r.get_subreddit('DnDBehindTheScreen')
         new_subs = BtS.get_new(limit=_fetch_limit)
         saw_something_said_something = False
@@ -117,9 +118,9 @@ def scan_submissions(seen, r):
             if TS.tables:
                 top_level_authors = [com.author for com in TS.source.comments]
                 # Check if I have already replied
-                if not TS.source in seen:
+                if TS.source not in seen:
                     seen.append(TS.source)
-                    if not r.user in top_level_authors:
+                    if r.user not in top_level_authors:
                         item.add_comment(keep_it_tidy_reply)
                         lprint("Adding organizational comment to thread with title: {}".format(TS.source.title))
                         saw_something_said_something = True
@@ -161,7 +162,7 @@ def process_mail(r):
             lprint("Mail is not summons or error.  Logging item.")
             item.log(_log_dir)
         item.origin.mark_as_read()
-    return ( 0 < len(to_process))
+    return (0 < len(to_process))
 
 
 def BeepBoop():
@@ -169,9 +170,8 @@ def BeepBoop():
     s = "\n\n-----\n\n"
     s += ("*Beep boop I'm a bot.  " +
           "You can find usage and known issue details about me, as well as my source code, on " +
-          "[GitHub](https://github.com/PurelyApplied/roll_one_for_me) page.  " +
-          "I am maintained by /u/PurelyApplied.*\n\n"
-          )
+          "[GitHub](https://github.com/PurelyApplied/roll_one_for_me) page. " +
+          " I am maintained by /u/PurelyApplied.*\n\n")
     s += "\n\n^(v{}; code base last updated {})".format(_version, _last_updated)
     return s
 
@@ -202,7 +202,7 @@ def test(mens=True):
     return r, my_mail, mentions
 
 
-#TODO: Each class is poorly commented.
+# TODO: Each class is poorly commented.
 
 ####################
 # classes
@@ -242,16 +242,15 @@ class Request:
         '''Fetches text of submission and top-level comments from thread
         containing this Request.  Builds a TableSource for each, and
         attempts to parse each for tables.
-
         '''
         # Default behavior: OP and top-level comments, as applicable
-        
-        #print("Parsing Request...", file=sys.stderr)
+
+        # print("Parsing Request...", file=sys.stderr)
         if re.search("\[.*?\]\s*\(.*?\)", self.origin.body):
-            #print("Adding links...", file=sys.stderr)
+            # print("Adding links...", file=sys.stderr)
             self.get_link_sources()
         else:
-            #print("Adding default set...", file=sys.stderr)
+            # print("Adding default set...", file=sys.stderr)
             self.get_default_sources()
 
 
@@ -264,8 +263,8 @@ class Request:
 
     def get_link_sources(self):
         links = re.findall("\[.*?\]\s*\(.*?\)", self.origin.body)
-        #print("Link set:", file=sys.stderr)
-        #print("\n".join([str(l) for l in links]), file=sys.stderr)
+        # print("Link set:", file=sys.stderr)
+        # print("\n".join([str(l) for l in links]), file=sys.stderr)
         for item in links:
             desc, href = re.search("\[(.*?)\]\s*\((.*?)\)", item).groups()
             href = href.strip()
@@ -277,7 +276,7 @@ class Request:
                 if ".json" in href.lower():
                     lprint("Pruning .json and anything beyond.")
                     href = href[:href.find('.json')]
-                if not 'www' in href.lower():
+                if 'www' not in href.lower():
                     lprint("Injecting 'www.' to href")
                     href = href[:href.find("reddit.com")] + 'www.' + href[href.find("reddit.com"):]
                 href = href.rstrip("/")
@@ -285,7 +284,7 @@ class Request:
                 self._maybe_add_source(
                     self.reddit.get_submission(href),
                     desc)
-                
+
     def get_default_sources(self):
         '''Default sources are OP and top-level comments'''
         try:
@@ -323,7 +322,7 @@ class Request:
                 f.write("Link    :  Unavailable (PM?)\n")
             f.write("Type    :  {}\n".format(type(self.origin)))
             try:
-                f.write("Body    : (below)\n[Begin body]\n{}\n[End body]\n".format( get_post_text(self.origin)))
+                f.write("Body    : (below)\n[Begin body]\n{}\n[End body]\n".format(get_post_text(self.origin)))
             except:
                 f.write("Body    : Could not resolve message body.")
             f.write("\n")
@@ -365,7 +364,7 @@ class TableSource:
         return None
 
     def has_tables(self):
-        return ( 0 < len(self.tables) )
+        return (0 < len(self.tables))
 
     def _parse(self):
         indices = []
@@ -380,11 +379,11 @@ class TableSource:
             return None
 
         table_text = []
-        for i in range(len(indices) -1):
-            table_text.append("\n".join(lines[ indices[i]:indices[i+1] ]))
-        table_text.append("\n".join(lines[ indices[-1]: ]))
+        for i in range(len(indices) - 1):
+            table_text.append("\n".join(lines[indices[i]:indices[i + 1]]))
+        table_text.append("\n".join(lines[indices[-1]:]))
 
-        self.tables = [ Table(t) for t in table_text ]
+        self.tables = [Table(t) for t in table_text]
 
 
 class TableSourceFromText(TableSource):
@@ -409,15 +408,16 @@ class TableSourceFromText(TableSource):
         if len(indices) == 0:
             return None
         table_text = []
-        for i in range(len(indices) -1):
-            table_text.append("\n".join(lines[ indices[i]:indices[i+1] ]))
-        table_text.append("\n".join(lines[ indices[-1]: ]))
-        self.tables = [ Table(t) for t in table_text ]
+        for i in range(len(indices) - 1):
+            table_text.append("\n".join(lines[indices[i]:indices[i + 1]]))
+        table_text.append("\n".join(lines[indices[-1]:]))
+        self.tables = [Table(t) for t in table_text]
 
 
 class Table:
     '''Container for a single set of TableItem objects
-    A single post will likely contain many Table objects'''
+    A single post will likely contain many Table objects
+    '''
     def __init__(self, text):
         self.text = text
         self.die = None
@@ -437,18 +437,18 @@ class Table:
         if head_match:
             self.die = int(head_match.group(2))
             self.header = head_match.group(3)
-        self.outcomes = [ TableItem(l) for l in lines if re.search(_line_regex, l.strip(_trash)) ]
+        self.outcomes = [TableItem(l) for l in lines if re.search(_line_regex, l.strip(_trash))]
 
     def roll(self):
         try:
-            weights = [ i.weight for i in self.outcomes]
+            weights = [i.weight for i in self.outcomes]
             total_weight = sum(weights)
 #            if debug:
 #                lprint("Weights ; Outcome")
 #                pprint(list(zip(self.weights, self.outcomes)))
             if self.die != total_weight:
                 self.header = "[Table roll error: parsed die did not match sum of item wieghts.]  \n" + self.header
-            #stops = [ sum(weights[:i+1]) for i in range(len(weights))]
+            # stops = [sum(weights[:i+1]) for i in range(len(weights))]
             c = random.randint(1, self.die)
             scan = c
             ind = -1
@@ -540,7 +540,7 @@ class InlineTable(Table):
 
         self.die = int(top.group(1))
         tail = top.group(2)
-        #sub_outs = []
+        # sub_outs = []
         while tail:
             in_match = re.search(_line_regex, tail.strip(_trash))
             if not in_match:
@@ -595,6 +595,7 @@ class TableRoll:
 ## util
 '''Contains roll_one_for_me utility functions'''
 
+
 # Used by both Request and TableSource ; should perhaps depricate this
 # and give each class its own method
 def get_post_text(post):
@@ -607,6 +608,7 @@ def get_post_text(post):
         lprint("Attempt to get post text from"
                " non-Comment / non-Submission post; returning empty string")
         return ""
+
 
 def fdate():
     return "-".join(str(x) for x in time.gmtime()[:6])

@@ -1,6 +1,12 @@
 #!/usr/bin/python3
-import praw, pickle
+import pickle
+
+import praw
+
+
 _pickle_filename = "pickle.cache"
+
+
 def main():
     try:
         to_report = pickle.load(open(_pickle_filename, 'rb'))
@@ -12,6 +18,6 @@ def main():
         print("Item {} ; Prediction: {}".format(i, to_report[i][1]))
         print(to_report[i][0].body)
 
-if __name__=="__main__":
-    main()
 
+if __name__ == "__main__":
+    main()
