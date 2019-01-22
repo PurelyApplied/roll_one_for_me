@@ -22,8 +22,8 @@ def main(long_lived=True, config_file="config.ini"):
     future_configuration.Config(config_file)
     future_configuration.configure_logging()
     logging.debug("Configuration loaded: '{}'.".format(future_configuration.Config()))
-    sleep_between_checks = future_configuration.Config.get(future_configuration.Section.interim,
-                                                           future_configuration.Subsection.sleep_between_checks)
+    sleep_between_checks = int(future_configuration.Config.get(future_configuration.Section.interim,
+                                                               future_configuration.Subsection.sleep_between_checks))
     logging.debug("Begin main()")
     try:
         logging.debug("Signing into Reddit.")
@@ -84,13 +84,13 @@ def beep_boop():
     """Builds and returns reply footer "Beep Boop I'm a bot...\""""
     s = "\n\n-----\n\n"
     s += ("*Beep boop I'm a bot.*\n\n" +
-          "*Sorry I've been away.  I had an API change, token decay, and my owner got hit by a car.  " +
-          "We're both doing much better now.*\n\n" +
-          "*You can find usage and known issue details about me, as well as my source code, on " +
+          "*Life is hectic.  I should be long-lived and fast to respond now, though.  But PMing is still borked.*\n\n"
+          "*But hey.  New features (and the old ones again, too) coming soon (tm).*\n\n"
+          "You can find usage and known issue details about me, as well as my source code, on "
           "[GitHub](https://github.com/PurelyApplied/roll_one_for_me) page.  " +
           "I am maintained by /u/PurelyApplied.*\n\n"
           )
-    s += "\n\n^(v2.[-1].n++; code base last updated on a computer.  Probably both of those to update soon.)"
+    s += "\n\n^(v2.(uint(-1)).snowglobe; code base last updated on my laptop \"Maiq\".)"
     return s
 
 
