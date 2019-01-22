@@ -41,10 +41,15 @@ def main(long_lived=True, config_file="config.ini"):
 
 
 def decline_private_messages():
+    apology = "I'm sorry.  PM parsing is currently borked."
+    apology += "  But look!  I'm alive again.  So that's promising, after all this time."
+    apology += "  Maybe PMs will get some love soon."
+    apology += "  Or maybe that re-write that my human has been meaning to do will actually get done."
+    apology += "  Here's to hoping."
+    reply_text = apology + "\n\n" + beep_boop()
+
     private_messages = FutureReddit.get_private_messages()
     for pm in private_messages:
-        apology = "I'm sorry.  PM parsing is currently borked.  I hope to have it up and running again soon."
-        reply_text = apology + "\n\n" + beep_boop()
         logging.info("Replying to {} with an apology declining to answer their PM.".format(pm.author))
         pm.reply(reply_text)
         FutureReddit.r.inbox.mark_read((pm,))
@@ -83,14 +88,15 @@ def process_mail():
 def beep_boop():
     """Builds and returns reply footer "Beep Boop I'm a bot...\""""
     s = "\n\n-----\n\n"
-    s += ("*Beep boop I'm a bot.*\n\n" +
-          "*Life is hectic.  I should be long-lived and fast to respond now, though.  But PMing is still borked.*\n\n"
-          "*But hey.  New features (and the old ones again, too) coming soon (tm).*\n\n"
-          "You can find usage and known issue details about me, as well as my source code, on "
+    s += ("*Beep boop I'm a bot.  And I live... AGAIN!*\n\n" +
+          "*Sorry about my human letting me go dark for almost a year.  What a dingus.*\n\n"
+          "*I should be long-lived and fast to respond again, though.  Although PMing is still borked.*\n\n"
+          "*But hey.  New features (and the old ones again, too) coming soon,"
+          " since my human is trying to refresh his resume and portfolio.*\n\n"
+          "*As ever, you can maybe find usage and known issue details about me, as well as my source code, on "
           "[GitHub](https://github.com/PurelyApplied/roll_one_for_me) page.  " +
-          "I am maintained by /u/PurelyApplied.*\n\n"
+          "I am maintained by /u/PurelyApplied, the dingus.*\n\n"
           )
-    s += "\n\n^(v2.(uint(-1)).snowglobe; code base last updated on my laptop \"Maiq\".)"
     return s
 
 
