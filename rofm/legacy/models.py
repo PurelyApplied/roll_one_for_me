@@ -367,7 +367,7 @@ def get_post_text(post):
     """Returns text to parse from either Comment or Submission"""
     if type(post) == Comment:
         try:
-            logging.debug("Try the body, it's fresh")
+            # logging.debug("Try the body, it's fresh")
             return post.body
         except PRAWException:
             logging.exception("Hopefully, I'm catching a \"Had no comment\" exception.  Convoluted to-sub thing!")

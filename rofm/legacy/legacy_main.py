@@ -31,6 +31,7 @@ def main(long_lived=True, config_file="config.ini"):
         while True:
             process_mail()
             if not long_lived:
+                logging.debug("Not run with --long-lived.  Exiting.")
                 return
             logging.debug("Heartbeat.")
             time.sleep(sleep_between_checks)
