@@ -1,13 +1,15 @@
-FROM ubuntu
+FROM alpine:latest
 
 LABEL maintainer="Patrick Rhomberg <coding@patrhom.com>"
 
 COPY praw.ini .config/praw.ini
 
-RUN apt-get update -q \
- && apt-get install -y python3 python3-pip git \
+RUN apk update \
+ && apk add python3 git \
+ && pip3 install --upgrade pip \
  && git clone --branch develop https://github.com/PurelyApplied/roll_one_for_me.git \
- && pip3 install -r roll_one_for_me/requirements.txt
+ && pip3 install -r roll_one_for_me/requirements.txt \
+ && mkdir roll_one_for_me/logs/
 
 WORKDIR roll_one_for_me
 ENTRYPOINT /usr/bin/python3 run_legacy.py --long-lived
