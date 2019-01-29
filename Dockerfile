@@ -5,8 +5,8 @@ LABEL maintainer="Patrick Rhomberg <coding@patrhom.com>"
 COPY praw.ini .config/praw.ini
 
 RUN apt-get update -q \
- && apt-get install -y python3 pip3 git
- && git clone https://github.com/PurelyApplied/roll_one_for_me.git
+ && apt-get install -y python3 python3-pip git \
+ && git clone --branch develop https://github.com/PurelyApplied/roll_one_for_me.git \
  && pip3 install -r roll_one_for_me/requirements.txt
 
 WORKDIR roll_one_for_me
