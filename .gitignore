@@ -1,0 +1,5 @@
+.idea/
+praw.ini
+__pycache__
+*.log
+*.log.*
