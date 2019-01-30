@@ -7,7 +7,7 @@ COPY praw.ini .config/praw.ini
 RUN apk update \
  && apk add python3 git \
  && pip3 install --upgrade pip \
- && git clone --branch develop https://github.com/PurelyApplied/roll_one_for_me.git \
+ && git clone https://github.com/PurelyApplied/roll_one_for_me.git \
  && pip3 install -r roll_one_for_me/requirements.txt \
  && mkdir roll_one_for_me/logs/
 
