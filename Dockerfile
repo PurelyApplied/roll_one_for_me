@@ -2,7 +2,7 @@ FROM alpine:latest
 
 LABEL maintainer="Patrick Rhomberg <coding@patrhom.com>"
 
-COPY praw.ini .config/praw.ini
+COPY praw.ini roll_one_for_me/praw.ini
 
 RUN apk update \
  && apk add python3 git \
