@@ -12,6 +12,6 @@ RUN apk update \
 COPY praw.ini roll_one_for_me/praw.ini
 
 WORKDIR roll_one_for_me
-ENTRYPOINT sh kick_off_legacy.sh
+ENTRYPOINT /usr/bin/python3 run_legacy.py &> /dev/null
 
 HEALTHCHECK CMD pgrep -af run_legacy.py &> /dev/null
