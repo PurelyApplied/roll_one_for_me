@@ -16,11 +16,14 @@ import time
 from .models import Request
 from ..classes.reddit.endpoint import Reddit as FutureReddit
 from ..classes.util import configuration as future_configuration
+import google.cloud.logging
 
 
 def main(long_lived=True, config_file="config.ini"):
     future_configuration.Config(config_file)
+    google.cloud.logging.Client().setup_logging()
     future_configuration.configure_logging()
+
     logging.debug("Configuration loaded: '{}'.".format(future_configuration.Config()))
     sleep_between_checks = int(future_configuration.Config.get(future_configuration.Section.interim,
                                                                future_configuration.Subsection.sleep_between_checks))

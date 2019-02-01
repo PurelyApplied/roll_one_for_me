@@ -14,4 +14,4 @@ COPY praw.ini roll_one_for_me/praw.ini
 WORKDIR roll_one_for_me
 ENTRYPOINT sh kick_off_legacy.sh
 
-HEALTHCHECK CMD pgrep -af run_legacy.py
+HEALTHCHECK CMD pgrep -af run_legacy.py &> /dev/null
