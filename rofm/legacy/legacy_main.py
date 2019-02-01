@@ -27,16 +27,23 @@ def main(long_lived=True, config_file="config.ini"):
     logging.debug("Configuration loaded: '{}'.".format(future_configuration.Config()))
     sleep_between_checks = int(future_configuration.Config.get(future_configuration.Section.interim,
                                                                future_configuration.Subsection.sleep_between_checks))
+    passes_between_heartbeats = int(future_configuration.Config.get(future_configuration.Section.interim,
+                                                                    future_configuration.Subsection.passes_between_heartbeats))
     logging.debug("Begin main()")
     try:
         logging.debug("Signing into Reddit.")
         sign_in_to_reddit()
+        pass_count = 0
         while True:
             process_mail()
             if not long_lived:
                 logging.debug("Not run with --long-lived.  Exiting.")
                 return
-            logging.debug("Heartbeat.")
+            if pass_count == passes_between_heartbeats:
+                pass_count = 0
+            if pass_count == 0:
+                logging.debug("Heartbeat.")
+            pass_count += 1
             time.sleep(sleep_between_checks)
     except Exception as e:
         logging.debug("Top level.  Allowing to die for cron to revive.")
