@@ -17,10 +17,12 @@ a particular wide-table might be formatted different, aggregating its children's
 Work is not necessarily processed in order, since modularity is ideal and any information required by one WorkItem
 should be specified by its parent.
 """
-from dataclasses import dataclass
+import logging
+from dataclasses import dataclass, field
 from enum import Enum
 
 from anytree import LevelOrderIter, RenderTree, NodeMixin, PreOrderIter
+from typing import Dict, Tuple, Optional
 
 
 class WorkloadType(str, Enum):
@@ -31,6 +33,7 @@ class WorkloadType(str, Enum):
     chat = "chat"
 
     # Top-level types
+    respond_with_private_message_apology = "apologize"
     default_request = "default_request"
     parse_op = "parse_op"
     parse_top_level_comments = "parse_top_level_comments"
@@ -52,13 +55,18 @@ class WorkloadType(str, Enum):
 class Workload:
     """Container class for workload type, arguments, and output."""
     work_type: WorkloadType
-    args: ()
+    args: Optional[Tuple] = ()
+    kwargs: Optional[Dict] = field(default_factory=dict)
     finished: bool = False
     output = None
 
 
 class WorkloadNode(Workload, NodeMixin):
     """anytree Workload hybrid.  Used to traverse the work tree, generating child nodes as needed."""
+
+    work_resolution = {}   # This is populated via the @workload_resolver decorator.
+    logger = logging.getLogger(f"{__name__}::WorkloadNode")
+    logger.setLevel(logging.DEBUG)
 
     def __init__(self, work_type: WorkloadType, args=(), *, name=None, parent=None):
         super(WorkloadNode, self).__init__(work_type, args)
@@ -70,24 +78,16 @@ class WorkloadNode(Workload, NodeMixin):
             node.do_my_work()
 
     def do_my_work(self):
-        print(f"Node {self} is doing work...")
-        if self.work_type == WorkloadType.username_mention:
-            WorkloadNode(WorkloadType.default_request, parent=self)
-        if self.work_type == WorkloadType.default_request:
-            WorkloadNode(WorkloadType.parse_op, parent=self)
-            WorkloadNode(WorkloadType.parse_comment_for_table, parent=self)
-            WorkloadNode(WorkloadType.parse_top_level_comments, parent=self)
-        if self.work_type == WorkloadType.parse_op:
-            WorkloadNode(WorkloadType.roll_table, args=("Table 1",), parent=self)
-            WorkloadNode(WorkloadType.roll_table, args=("Table 2",), parent=self)
-            WorkloadNode(WorkloadType.roll_table, args=("Table 3",), parent=self)
-            WorkloadNode(WorkloadType.roll_table, args=("Table 4",), parent=self)
-        if self.work_type == WorkloadType.parse_comment_for_table:
-            WorkloadNode(WorkloadType.roll_table, args=("Table from comment",), parent=self)
-        if self.work_type == WorkloadType.parse_top_level_comments:
-            for _ in range(3):
-                WorkloadNode(WorkloadType.parse_comment_for_table, parent=self)
+        """Examine the type of work you are and delegate it out."""
+        self.logger.info(f"Node {self} is doing work...")
 
+        resolver = self.work_resolution[self.work_type]
+        print(f"Resolving work of {self} via: {resolver}(*{self.args}, **{self.kwargs}")
+        new_work = resolver(*self.args, **self.kwargs)
+
+        if new_work:
+            for child in new_work:
+                child.parent = self
         self.finished = True
 
     def __repr__(self):
@@ -97,12 +97,68 @@ class WorkloadNode(Workload, NodeMixin):
         for node in LevelOrderIter(self):
             node.__do_work()
 
+    @classmethod
+    def _register_resolver(cls, work_type, registered_resolver, override=False):
+        """Registers a workload resolver.  Please decorate your functions with @.workload_resolver instead."""
+        assert override or work_type not in cls.work_resolution, f"Resolver for {work_type} already present."
+        cls.work_resolution[work_type] = registered_resolver
+
+    @classmethod
+    def workload_resolver(cls, *work_types, override=False):
+        """Registers the decorated function as the resolver for the given work_type.
+        If additional work is required, the decorated function should return a collection containing the
+        additional WorkloadNode containers.  Parent-child relationship will be written after return."""
+
+        assert work_types, "Specify at least one WorkloadType to resolve via this function."
+
+        def decorator(f):
+            for wt in work_types:
+                cls._register_resolver(wt, f, override=override)
+            return f
+        return decorator
+
+
+@WorkloadNode.workload_resolver(*WorkloadType)
+def not_yet_implemented():
+    pass
+
+
+@WorkloadNode.workload_resolver(WorkloadType.username_mention, override=True)
+def resolve_username_mention():
+    return WorkloadNode(WorkloadType.default_request),
+
+
+@WorkloadNode.workload_resolver(WorkloadType.default_request, override=True)
+def resolve_default_request():
+    return (WorkloadNode(WorkloadType.parse_op),
+            WorkloadNode(WorkloadType.parse_comment_for_table),
+            WorkloadNode(WorkloadType.parse_top_level_comments))
+
+
+@WorkloadNode.workload_resolver(WorkloadType.parse_op, override=True)
+def resolve_parse_op():
+    return (WorkloadNode(WorkloadType.roll_table, name="Roll table 1", args=("Table 1",)),
+            WorkloadNode(WorkloadType.roll_table, name="Roll table 2", args=("Table 2",)),
+            WorkloadNode(WorkloadType.roll_table, name="Roll table 3", args=("Table 3",)),
+            WorkloadNode(WorkloadType.roll_table, name="Roll table 4", args=("Table 4",)),)
+
+
+@WorkloadNode.workload_resolver(WorkloadType.parse_comment_for_table, override=True)
+def resolve_parse_comment_for_table():
+    return WorkloadNode(WorkloadType.roll_table, args=("Table from comment",)),
+
+
+@WorkloadNode.workload_resolver(WorkloadType.parse_top_level_comments, override=True)
+def resolve_parse_top_level_comments():
+    return tuple(WorkloadNode(WorkloadType.parse_comment_for_table) for _ in range(3))
+
+
+@WorkloadNode.workload_resolver(WorkloadType.roll_table, override=True)
+def resolve_parse_top_level_comments(table_name):
+    print(f"I'm rolling table {table_name}")
+
 
 if __name__ == '__main__':
-    # root = WorkloadNode("root")
-    # root.work()
-    # print(RenderTree(root))
-
     root = WorkloadNode(work_type=WorkloadType.default_request, name="Initial request")
     root.do_all_work()
     print(RenderTree(root))
