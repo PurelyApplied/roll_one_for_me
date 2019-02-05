@@ -191,12 +191,8 @@ def scan_comment_for_table(mention: Comment):
 
 @WorkNode.workload_resolver(WorkloadType.roll_table, override=True)
 def roll_a_table(table: Table):
-    return WorkNode(WorkloadType.roll_this_die, args=(table.die,), name=f"Roll d{table.die}")
-
-
-@WorkNode.workload_resolver(WorkloadType.roll_this_die, override=True)
-def perform_die_roll(die_size: int):
-    return randint(1, die_size)
+    return randint(1, table.die)
+    # return WorkNode(WorkloadType.roll_this_die, args=(table.die,), name=f"Roll d{table.die}")
 
 
 @WorkNode.workload_resolver(WorkloadType.parse_arbitrary_text_for_table, override=True)
@@ -234,5 +230,6 @@ def process_username_mention(mention: Comment):
 
 if __name__ == '__main__':
     for _type in WorkloadType:
+        # noinspection PyTypeChecker
         if WorkNode.work_resolution.get(_type, not_yet_implemented) == not_yet_implemented:
             print(f"No resolver yet for {_type}")
