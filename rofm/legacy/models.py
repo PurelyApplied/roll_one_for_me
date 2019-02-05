@@ -8,8 +8,8 @@ from praw.models import Comment, Submission, Message
 
 from ..classes.reddit.endpoint import Reddit as FutureReddit
 
-_header_regex = "^(\d+)?[dD](\d+)(.*)"
-_line_regex = "^(\d+)(\s*-+\s*\d+)?(.*)"
+_header_regex = r"^(\d+)?[dD](\d+)(.*)"
+_line_regex = r"^(\d+)(\s*-+\s*\d+)?(.*)"
 _summons_regex = "u/roll_one_for_me"
 
 _trash = string.punctuation + string.whitespace
@@ -44,9 +44,8 @@ class TableSource:
         indices = []
         text = get_post_text(self.source)
         lines = text.split("\n")
-        for line_num in range(len(lines)):
-            l = lines[line_num]
-            if re.search(_header_regex, l.strip(_trash)):
+        for line_num, line_text in enumerate(lines):
+            if re.search(_header_regex, line_text.strip(_trash)):
                 indices.append(line_num)
         # TODO: if no headers found?
         if len(indices) == 0:
@@ -350,9 +349,8 @@ class TableSourceFromText(TableSource):
         indices = []
         text = self.text
         lines = text.split("\n")
-        for line_num in range(len(lines)):
-            l = lines[line_num]
-            if re.search(_header_regex, l.strip(_trash)):
+        for line_num, line in enumerate(lines):
+            if re.search(_header_regex, line.strip(_trash)):
                 indices.append(line_num)
         if len(indices) == 0:
             return None
@@ -381,4 +379,3 @@ def get_post_text(post):
         logging.debug("Attempt to get post text from"
                       " non-Comment / non-Submission post; returning empty string")
         return ""
-
