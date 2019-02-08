@@ -14,7 +14,7 @@ import logging
 import time
 
 from .models import Request
-from ..classes.reddit.endpoint import Reddit as FutureReddit
+from rofm.classes.reddit import Reddit as FutureReddit
 from ..classes.util import configuration as future_configuration
 import google.cloud.logging
 
@@ -59,7 +59,7 @@ def decline_private_messages():
     apology += "  Here's to hoping."
     reply_text = apology + "\n\n" + beep_boop()
 
-    private_messages = FutureReddit.get_private_messages()
+    private_messages = FutureReddit.get_unread_private_messages()
     for pm in private_messages:
         logging.info("Replying to {} with an apology declining to answer their PM.".format(pm.author))
         pm.reply(reply_text)
@@ -68,7 +68,7 @@ def decline_private_messages():
 
 def process_mail():
     decline_private_messages()
-    my_mail = FutureReddit.get_mentions()
+    my_mail = FutureReddit.get_unread_username_mentions()
     to_process = [Request(x, FutureReddit.r) for x in my_mail]
     for item in to_process:
         if item.is_summons() or item.is_private_message():
@@ -122,8 +122,8 @@ def mail_util():
     else, returns tuple (reddit_handle, list_of_all_mail, None)
     """
     sign_in_to_reddit()
-    all_mail = FutureReddit.get_unread()
-    mentions = FutureReddit.get_mentions()
+    all_mail = FutureReddit.get_unread_mail()
+    mentions = FutureReddit.get_unread_username_mentions()
     return all_mail, mentions
 
 

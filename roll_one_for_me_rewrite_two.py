@@ -4,8 +4,9 @@ import logging
 import logging.handlers
 import time
 
+from rofm.classes.core.work.workload import WorkNode, WorkloadType
 from rofm.classes.reddit import Reddit
-from rofm.classes.util.configuration import Config
+from rofm.classes.util.configuration import Config, Section, Subsection
 from rofm.classes.util.decorators import static_vars, occasional
 
 
@@ -19,7 +20,6 @@ def main(long_lived=True, config_file="config.ini"):
 
         answer_username_mentions()
         answer_private_messages()
-        perform_sentinel_search()
 
         heartbeat()
         sleep()
@@ -39,11 +39,25 @@ def sleep():
 
 def answer_username_mentions():
     mentions = Reddit.get_unread_username_mentions()
-
     logging.info("Username mentions in this pass: {}".format(len(mentions)))
     for user_mention in mentions:
-        pass
-        # answer_mention(user_mention)
+        this_mention_workload = WorkNode(WorkloadType.username_mention,
+                                         args=(user_mention,),
+                                         name=f"Mention from {user_mention.author}")
+        this_mention_workload.do_all_work()
+        user_mention.reply(this_mention_workload.get_response_text())
+
+
+def answer_private_messages():
+    logging.info("PM functionality disabled.")
+    pass
+
+
+def update_static_variables():
+    interim = Config.get(Section.interim)
+
+    sleep.interval = int(interim.get(Subsection.sleep_between_checks))
+    heartbeat.frequency = int(interim.get(Subsection.passes_between_heartbeats))
 
 
 if __name__ == "__main__":
