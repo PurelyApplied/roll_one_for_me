@@ -156,5 +156,6 @@ class DecoratorTests(unittest.TestCase):
         with self.assertRaises(Exception):
             four_exceptions_then_return_one()
 
+
 if __name__ == "__main__":
     unittest.main()

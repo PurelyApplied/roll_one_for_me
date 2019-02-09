@@ -1,47 +1,62 @@
 #!/usr/bin/env python3
 import random
-import re
+from dataclasses import dataclass
 
+from rofm.classes.parsers import parse_roll_string, ROLL_REGEX
 from .keep import Keep
 
-ROLL_REGEX_STR = r"(\d+)?[dD](\d+)(?:([v^])(\d+))?"
-ROLL_REGEX = re.compile(ROLL_REGEX_STR)
-STARTS_WITH_ROLL_REGEX = re.compile(r"^" + ROLL_REGEX_STR)
+
+@dataclass
+class RollSpec:
+    n: int
+    k: int
+    keep = Keep.ALL
+    keep_count: int = 0  # Ignored by Keep.ALL
 
 
 class Roll(list):
     """Wrapped list of values rolled, given a roll string, i.e. 5d4 or 4d6^3"""
 
-    maximum_dice = 100
+    maximum_dice_count = 100
     maximum_die_size = 1000
 
-    def __init__(self, s: str, sort_by=None):
-        self.original_string = s
-        match = ROLL_REGEX.match(s)
+    @staticmethod
+    def from_spec(n: int, k: int, keep=Keep.ALL, keep_count=None, sort=True):
+        if keep_count is None:
+            keep_count = n
+        str_n = '' if n <= 1 else str(n)
+        str_keep = keep.to_char() + ('' if keep_count == n else str(keep_count))
+        s = f"{str_n}d{k}{str_keep}"
+        return Roll(s, auto_sort=sort)
 
-        self.n = int(match.group(1)) if match.group(1) is not None else 1
-        self.k = int(match.group(2))
-        drop = match.group(3)
-        keep_str = match.group(4)
-        self.keep = drop and Keep.from_char(drop) or Keep.ALL
-        self.keep_count = self.n if not drop else int(keep_str)
+    def __init__(self, s: str, *, auto_sort=True):
+        self.original_string = s
+        self.auto_sort = auto_sort
+        self.n, self.k, self.keep, self.keep_count = parse_roll_string(s)
 
         self._validate()
 
+        self._roll()
+
+    def _roll(self):
         super().__init__(random.randint(1, self.k) for _ in range(self.n))
-        self.sort(key=sort_by)
+        if self.auto_sort:
+            self.sort()
 
     def reroll(self):
-        super().__init__(random.randint(1, self.k) for _ in range(self.n))
+        self._roll()
 
-    def min(self):
+    def minimum_possible(self):
         return self.keep_count
 
-    def max(self):
+    def maximum_possible(self):
         return self.k * self.keep_count
 
     def __repr__(self):
         return "Roll('{}')".format(self.original_string)
+
+    def __int__(self):
+        return sum(self)
 
     def __str__(self):
         if self.n == 1:
@@ -53,11 +68,7 @@ class Roll(list):
         kept_dice = _join_to_string(self, kept_start, kept_end)
         top_dropped_dice = wrap_in_parens_if_not_empty(_join_to_string(self, kept_end, len(self)), pad_before=" ")
 
-        return "[{}{}{}] -> {}".format(
-            bottom_dropped_dice,
-            kept_dice,
-            top_dropped_dice,
-            self.value())
+        return f"[{bottom_dropped_dice}{kept_dice}{top_dropped_dice}] -> {self.value()}"
 
     def _get_kept_range(self):
         """Returns indices defining the range of dice kept.
@@ -72,9 +83,9 @@ class Roll(list):
     def _validate(self):
         if not 0 < self.keep_count <= self.n:
             raise TypeError("Roll string '{}' would keep an invalid number of dice.".format(self.original_string))
-        if not 0 < self.n <= self.maximum_dice:
+        if not 0 < self.n <= self.maximum_dice_count:
             raise TypeError("Number of dice [{}] is not between 0 and maximum dice limit [{}]".format(
-                self.n, self.maximum_dice))
+                self.n, self.maximum_dice_count))
         if not 0 < self.k <= self.maximum_die_size:
             raise TypeError("Die size [{}] is not between 0 and maximum die size [{}]".format(
                 self.k, self.maximum_die_size))
@@ -110,13 +121,13 @@ class Throw:
         # TODO: This doesn't take - or / into account
         if '-' in self.original_string or '/' in self.original_string:
             raise ArithmeticError("Throw.min does not take sensible things into account.")
-        return eval(self.format_string.format(*(roll.min() for roll in self.rolls)))
+        return eval(self.format_string.format(*(roll.minimum_possible() for roll in self.rolls)))
 
     def max(self):
         # TODO: This doesn't take - or / into account
         if '-' in self.original_string or '/' in self.original_string:
             raise ArithmeticError("Throw.max does not take sensible things into account.")
-        return eval(self.format_string.format(*(roll.max() for roll in self.rolls)))
+        return eval(self.format_string.format(*(roll.maximum_possible() for roll in self.rolls)))
 
     def get_evaluated_string(self):
         return self.format_string.format(*(roll.value() for roll in self.rolls))
@@ -146,4 +157,4 @@ def _join_to_string(roll, start, end):
 
 # noinspection SpellCheckingInspection
 def wrap_in_parens_if_not_empty(s, pad_before="", pad_after=""):
-    return "" if not s else "{}({}){}".format(pad_before, s, pad_after)
+    return "" if not s else f"{pad_before}({s}){pad_after}"

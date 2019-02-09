@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup, Tag
 
 from rofm.classes.core.work.workload import WorkNode, WorkloadType
 from rofm.classes.reddit import Reddit, comment_contains_username
-from rofm.classes.tables.table import Table
+from rofm.classes.tables.table import NewerLegacyTable
 
 HTML_PARSER = 'html.parser'
 
@@ -17,7 +17,7 @@ class HtmlTable:
     auto_parse = False
 
     soupy_items: List[str] = None
-    table: Table = None
+    table: NewerLegacyTable = None
     soup: BeautifulSoup = None
 
     def __init__(self, soupy_table: Tag, auto_parse=False):

@@ -16,5 +16,6 @@ def prompt_for_yes_no(prompt_string, default=None):
             return valid[choice]
         print("Please respond with 'yes' or 'no'\n")
 
+
 if __name__ == '__main__':
     prompt_for_yes_no("test case. > ")

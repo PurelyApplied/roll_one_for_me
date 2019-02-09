@@ -21,45 +21,48 @@ import collections
 import logging
 import typing
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, auto
 from functools import wraps
-from random import randint
 from typing import Dict, Tuple, Optional, List, Callable, Any
 
 from anytree import LevelOrderIter, NodeMixin, PreOrderIter
+# noinspection PyMethodParameters
 from praw.models import Comment, Submission
 
-from rofm.legacy.models import TableSourceFromText, Table
+
+class AutoName(Enum):
+    def _generate_next_value_(name, start, count, last_values):
+        return name
 
 
-class WorkloadType(str, Enum):
+class WorkloadType(str, AutoName):
     """Every Workload / WorkNode should refer to a definitive type to determine behavior."""
     # Level "zero" request types
-    username_mention = "username_mention"
-    private_message = "private_message"
-    chat = "chat"
+    username_mention = auto()
+    private_message = auto()
+    chat = auto()
 
     # Parsing actions
-    parse_op = "parse_op"
-    parse_for_reddit_domain_urls = "parse_for_reddit_domain_urls"
-    parse_top_level_comments = "parse_top_level_comments"
-    parse_comment_for_table = "parse_comment_for_table"
-    parse_arbitrary_text_for_table = "parse_arbitrary_text_for_table"
-    parse_table = "parse_table"
-    parse_wide_table = "parse_wide_table"
-    perform_basic_roll = "perform_basic_roll"
-    perform_compound_roll = "perform_compound_roll"
+    parse_op = auto()
+    parse_for_reddit_domain_urls = auto()
+    parse_top_level_comments = auto()
+    parse_comment_for_table = auto()
+    parse_arbitrary_text_for_table = auto()
+    parse_table = auto()
+    parse_wide_table = auto()
+    perform_basic_roll = auto()
+    perform_compound_roll = auto()
 
     # Rolling actions
-    roll_stats = "roll_stats"
-    roll_specific_request = "roll_specific_request"
-    roll_table = "roll_table"
-    roll_this_die = "roll_this_die"
+    roll_stats = auto()
+    roll_specific_request = auto()
+    roll_table = auto()
+    roll_this_die = auto()
 
     # Other actions
-    respond_with_private_message_apology = "apologize"
-    default_request = "default_request"
-    follow_link = "follow_link"
+    respond_with_private_message_apology = auto()
+    default_request = auto()
+    follow_link = auto()
 
 
 class WorkloadOutput:
@@ -132,6 +135,7 @@ class WorkNode(Workload, NodeMixin):
     def _register_resolver(cls, work_type, registered_resolver, override=False):
         """Registers a workload resolver.  Please decorate your functions with @.workload_resolver instead."""
         assert override or work_type not in cls.work_resolution, f"Resolver for {work_type} already present."
+        cls.logger.info(f"Registering resolver {work_type} -> {registered_resolver.__name__}")
         cls.work_resolution[work_type] = registered_resolver
 
     @classmethod
@@ -172,43 +176,37 @@ class WorkNode(Workload, NodeMixin):
         return decorator
 
 
-# noinspection PyUnusedLocal
-@WorkNode.workload_resolver(*WorkloadType)
-def not_yet_implemented(*args, **kwargs):
-    raise NotImplementedError("Hey ya dingus.  You didn't implement that work type yet!")
-
-
-@WorkNode.workload_resolver(WorkloadType.parse_top_level_comments, override=True)
+@WorkNode.workload_resolver(WorkloadType.parse_top_level_comments)
 def scan_top_level_comments(comments: List[Comment]):
     return [WorkNode(WorkloadType.parse_comment_for_table, args=(comment,), name=f"Top-level comment {i + 1}")
             for i, comment in enumerate(comments)]
 
 
-@WorkNode.workload_resolver(WorkloadType.parse_comment_for_table, override=True)
+@WorkNode.workload_resolver(WorkloadType.parse_comment_for_table)
 def scan_comment_for_table(mention: Comment):
     return WorkNode(WorkloadType.parse_arbitrary_text_for_table, args=(mention.body,))
 
 
-@WorkNode.workload_resolver(WorkloadType.roll_table, override=True)
-def roll_a_table(table: Table):
-    return randint(1, table.die)
+# @WorkNode.workload_resolver(WorkloadType.roll_table)
+# def roll_a_table(table: Table):
+#     return randint(1, table.die)
     # return WorkNode(WorkloadType.roll_this_die, args=(table.die,), name=f"Roll d{table.die}")
 
 
-@WorkNode.workload_resolver(WorkloadType.parse_arbitrary_text_for_table, override=True)
-def scan_text_for_table(text: str):
-    table_source = TableSourceFromText(text, "meaningless descriptor")
-    if table_source.has_tables():
-        return [WorkNode(WorkloadType.roll_table, args=(t,), name=f"Roll table {t.header}")
-                for t in table_source.tables]
+# @WorkNode.workload_resolver(WorkloadType.parse_arbitrary_text_for_table)
+# def scan_text_for_table(text: str):
+#     table_source = TableSourceFromText(text, "meaningless descriptor")
+#     if table_source.has_tables():
+#         return [WorkNode(WorkloadType.roll_table, args=(t,), name=f"Roll table {t.header}")
+#                 for t in table_source.tables]
 
 
-@WorkNode.workload_resolver(WorkloadType.parse_op, override=True)
+@WorkNode.workload_resolver(WorkloadType.parse_op)
 def scan_submission_for_table(op: Submission):
     return WorkNode(WorkloadType.parse_arbitrary_text_for_table, args=(op.selftext,))
 
 
-@WorkNode.workload_resolver(WorkloadType.username_mention, override=True)
+@WorkNode.workload_resolver(WorkloadType.username_mention)
 def process_username_mention(mention: Comment):
     # Until it is decided otherwise, a mention gets three actions:
     # (1) Look at the comment itself for a table
@@ -229,7 +227,14 @@ def process_username_mention(mention: Comment):
 
 
 if __name__ == '__main__':
-    for _type in WorkloadType:
-        # noinspection PyTypeChecker
-        if WorkNode.work_resolution.get(_type, not_yet_implemented) == not_yet_implemented:
-            print(f"No resolver yet for {_type}")
+    # rofm.classes.core.work.workload_resolvers.load_resolvers()
+
+    resolved, unresolved = split_iterable(WorkloadType, lambda x: WorkNode.work_resolution.get(x, None) is not None)
+    for _type in resolved:
+        _resolver = WorkNode.work_resolution.get(_type)
+        print(f"Type {_type} resolved by {_resolver.__name__}")
+
+    print()
+    for _type in unresolved:
+        print(f"No resolver yet for {_type}")
+

@@ -1,11 +1,11 @@
-from enum import Enum, unique
+from enum import Enum, unique, auto
 
 
 @unique
 class Keep(Enum):
-    ALL = 1
-    TOP = 2
-    BOTTOM = 3
+    ALL = auto()
+    TOP = auto()
+    BOTTOM = auto()
 
     @staticmethod
     def from_char(c) -> Enum:
@@ -15,7 +15,7 @@ class Keep(Enum):
             return Keep.TOP
         if c.lower() == 'v':
             return Keep.BOTTOM
-        return None
+        raise ValueError("Cannot get Keep enum from characters other than '', '^', 'v'")
 
     def to_char(self) -> str:
         if self == Keep.ALL:

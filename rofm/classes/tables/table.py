@@ -3,13 +3,19 @@ import re
 from string import punctuation, whitespace
 from typing import Union, Tuple
 
-from ..rollers.roll import Roll, Throw, STARTS_WITH_ROLL_REGEX
+from rofm.classes.parsers import STARTS_WITH_ROLL_REGEX
+from ..rollers.roll import Roll, Throw
 
 _trash = punctuation + whitespace
 _line_regex = "^(\d+)(\s*-+\s*\d+)?(.*)"
 
 
 class Table:
+    pass
+
+
+
+class NewerLegacyTable:
     def __init__(self, roll: Union[str, Roll, Throw], header: str,
                  *outcomes: Union[Tuple[int, str]]):
         """:param roll: Dice generation method by which outcomes are selected
@@ -38,7 +44,7 @@ def parse_enumerated_table(text):
     roll = Roll(roll_string)
     header = header_line.strip(_trash)[leading_header_roll.span()[1]:]
     outcomes = [l for l in lines if re.search(_line_regex, l.strip(_trash))]
-    table = Table(roll, header, *outcomes)
+    table = NewerLegacyTable(roll, header, *outcomes)
     return table
 
 

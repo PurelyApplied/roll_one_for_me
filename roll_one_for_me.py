@@ -33,14 +33,14 @@ def heartbeat():
 
 @static_vars(interval=5)
 def sleep():
-    logging.info("Sleeping for {} seconds.".format(sleep.interval))
+    logging.info(f"Sleeping for {sleep.interval} seconds.")
     time.sleep(sleep.interval)
 
 
 def answer_username_mentions():
     mentions = Reddit.get_unread_username_mentions()
 
-    logging.info("Username mentions in this pass: {}".format(len(mentions)))
+    logging.info(f"Username mentions in this pass: {len(mentions)}")
     for user_mention in mentions:
         pass
         # answer_mention(user_mention)
