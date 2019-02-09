@@ -1,56 +1,69 @@
 #!/usr/bin/env python3
-import re
-from string import punctuation, whitespace
-from typing import Union, Tuple
+from dataclasses import dataclass, field
+from typing import List, Dict, Tuple, Any
 
-from rofm.classes.parsers import STARTS_WITH_ROLL_REGEX
-from ..rollers.roll import Roll, Throw
-
-_trash = punctuation + whitespace
-_line_regex = "^(\d+)(\s*-+\s*\d+)?(.*)"
+import dice
 
 
+@dataclass
 class Table:
-    pass
+    """A simple backbone for a lookup-table as dictated by a die-roll."""
+    dice: str
+    description: str = ''
+    lookup_table: Dict[int, Any] = field(default_factory=dict)
+
+    def roll(self):
+        outcome = int(dice.roll(self.dice))
+        return self.get(outcome)
+
+    def get(self, outcome):
+        return self.lookup_table[outcome]
+
+    def low(self):
+        return int(dice.roll_min(self.dice))
+
+    def high(self):
+        return int(dice.roll_max(self.dice))
+
+    def _validate(self):
+        self._validate_ranges()
+
+    def _validate_ranges(self):
+        for i in range(int(dice.roll_min(self.dice)), int(dice.roll_max(self.dice)) + 1):
+            assert i in self.lookup_table, f"Table is missing an entry for a '{self.dice}' outcome of {i}."
 
 
+class SimpleTable(Table):
+    def __init__(self, roll, items: List[Any], description=''):
+        super(SimpleTable, self).__init__(roll, description=description)
+        low, high = self.low(), self.high()
+        length = len(items)
+        assert length == high - low + 1, f"SimpleTable expects input list to be length ({length}) == {high} - {low} + 1"
+        self.lookup_table = {i + low: elem for i, elem in enumerate(items)}
 
-class NewerLegacyTable:
-    def __init__(self, roll: Union[str, Roll, Throw], header: str,
-                 *outcomes: Union[Tuple[int, str]]):
-        """:param roll: Dice generation method by which outcomes are selected
-        :param header: Title of the table
-        :param outcomes: List of tuples"""
-        self.roll = roll if isinstance(roll, Roll) or isinstance(roll, Throw) else Throw(roll)
-        self.header = header
-        self.outcomes = list(outcomes)
-        self.outcomes.sort()
-
-    def __str__(self):
-        return "Table({}, '{}', {})".format(self.roll.original_string, self.header, self.outcomes)
-
-    def get_outcome(self):
-        value = self.roll.value()
-        return self.outcomes[value - 1]
+        self._validate()
 
 
-def parse_enumerated_table(text):
-    lines = text.strip('\n').split('\n')
-    header_line = lines.pop(0)
-    leading_header_roll = re.search(STARTS_WITH_ROLL_REGEX, header_line.strip(_trash))
-    if not leading_header_roll:
-        raise RuntimeError("AHHHHH!")
-    roll_string = leading_header_roll.group(0)
-    roll = Roll(roll_string)
-    header = header_line.strip(_trash)[leading_header_roll.span()[1]:]
-    outcomes = [l for l in lines if re.search(_line_regex, l.strip(_trash))]
-    table = NewerLegacyTable(roll, header, *outcomes)
-    return table
+@dataclass
+class WeightedTable(Table):
+    outcomes: List[Any] = field(default_factory=list, repr=False)
+    ranges: List[Tuple[int]] = field(default_factory=list ,repr=False)    # inclusive
+
+    def __init__(self, roll, outcomes, ranges, description=''):
+        self.outcomes = outcomes
+        self.ranges = ranges
+
+        super(WeightedTable, self).__init__(roll, description=description)
+        for item, (lower_range, higher_range) in zip(self.outcomes, self.ranges):
+            for i in range(lower_range, higher_range + 1):
+                if i in self.lookup_table:
+                    raise ValueError(f"This table would have multiple outcomes for {i}")
+                self.lookup_table[i] = item
+
+        self._validate()
 
 
-def parse_inline_table(tight_inline_text):
-    """:param tight_inline_text: A line *beginning* with the roll indicator"""
-    # Match roll and advance
-    # Match any "header" before enumeration begins
-    # Match items
-    return None
+if __name__ == '__main__':
+    st = SimpleTable('2d4', [2, 3, 4, 5, 6, 7, 8])
+    wt = WeightedTable('2d4', ["2-4", "5-6", "7-8"], [(2, 4), (5, 6), (7, 8)])
+    print(wt)
