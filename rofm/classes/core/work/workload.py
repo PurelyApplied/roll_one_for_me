@@ -26,10 +26,10 @@ from functools import wraps
 from typing import Dict, Tuple, Optional, List, Callable, Any
 
 from anytree import LevelOrderIter, NodeMixin, PreOrderIter
-# noinspection PyMethodParameters
 from praw.models import Comment, Submission
 
 
+# noinspection PyMethodParameters
 class AutoName(Enum):
     def _generate_next_value_(name, start, count, last_values):
         return name

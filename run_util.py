@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup, Tag
 
 from rofm.classes.core.work.workload import WorkNode, WorkloadType
 from rofm.classes.reddit import Reddit, comment_contains_username
-from rofm.classes.tables.table import NewerLegacyTable
+from rofm.classes.tables import Table
 
 HTML_PARSER = 'html.parser'
 
@@ -17,7 +17,7 @@ class HtmlTable:
     auto_parse = False
 
     soupy_items: List[str] = None
-    table: NewerLegacyTable = None
+    table: Table = None
     soup: BeautifulSoup = None
 
     def __init__(self, soupy_table: Tag, auto_parse=False):
@@ -58,7 +58,8 @@ class HtmlParser:
 
         before, after = iter(tag_set), iter(tag_set)
         next(after)
-        self.soupy_enumeration_with_header_pairs = [(b if b.name == 'p' else None, a) for b, a in zip(before, after) if a.name == 'ol']
+        self.soupy_enumeration_with_header_pairs = [(b if b.name == 'p' else None, a)
+                                                    for b, a in zip(before, after) if a.name == 'ol']
 
 
 headered_enumeration_submission_example = \
