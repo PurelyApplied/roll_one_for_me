@@ -187,12 +187,6 @@ def scan_comment_for_table(mention: Comment):
     return WorkNode(WorkloadType.parse_arbitrary_text_for_table, args=(mention.body,))
 
 
-# @WorkNode.workload_resolver(WorkloadType.roll_table)
-# def roll_a_table(table: Table):
-#     return randint(1, table.die)
-    # return WorkNode(WorkloadType.roll_this_die, args=(table.die,), name=f"Roll d{table.die}")
-
-
 # @WorkNode.workload_resolver(WorkloadType.parse_arbitrary_text_for_table)
 # def scan_text_for_table(text: str):
 #     table_source = TableSourceFromText(text, "meaningless descriptor")

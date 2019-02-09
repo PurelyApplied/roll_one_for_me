@@ -5,3 +5,4 @@ anytree==2.5.0
 beautifulsoup4==4.7.1
 dice==2.4.0
 numpy==1.16.1
+pyparsing==2.3.1
