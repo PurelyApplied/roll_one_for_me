@@ -1,24 +1,59 @@
 #!/usr/bin/env python3
-
+from dataclasses import dataclass, field
 from typing import List, Tuple
 
-from anytree import RenderTree
+import dice
 from bs4 import BeautifulSoup, Tag
+from pyparsing import ParseBaseException
 
-from rofm.classes.core.work.workload import WorkNode, WorkloadType
 from rofm.classes.reddit import Reddit, comment_contains_username
-from rofm.classes.tables import Table
+from rofm.classes.tables import Table, SimpleTable
 
 HTML_PARSER = 'html.parser'
 
 
-class HtmlTable:
+@dataclass
+class TableContainer:
+    tables: List[Table] = field(default_factory=list)
+
+
+class HtmlTableEnumerationParser(TableContainer):
+    """Necessarily a single table."""
+    soupy_enumerations: Tag
+    auto_parse = False
+
+    soupy_items: List[str] = None
+    table: Table = None
+
+    def __init__(self, soupy_enumeations: Tag, auto_parse=False):
+        possibly_a_header = soupy_enumeations.find_previous_sibling('p')
+        self.soupy_items = soupy_enumeations.find_all('li')
+
+        dice_roll, desc = self._get_roll_and_dec(possibly_a_header)
+
+        table = SimpleTable(dice_roll, [item.text for item in self.soupy_items], description=desc)
+        self.tables = [table]
+        print(self)
+
+    def _get_roll_and_dec(self, possibly_a_header):
+        """If the header starts with a die roll, returns that die roll and the remaining line.
+        Otherwise, returns the presumed die roll (1d<item count>) and a hopeful description."""
+        stripped = list(possibly_a_header.stripped_strings)
+        try:
+            dice.parse_expression(stripped[0])
+            return stripped[0], " ".join(stripped[1:])
+        except ParseBaseException as e:
+            print(f"Got exception {e} when rolling {stripped[0]}.  Probably not a die.")
+            return "A free-standing enumeration", f"d{len(self.soupy_items)}"
+
+
+class HtmlTableTagParser(TableContainer):
+    """Possibly a wide table / multiple tables."""
     soupy_table: Tag
     auto_parse = False
 
     soupy_items: List[str] = None
     table: Table = None
-    soup: BeautifulSoup = None
 
     def __init__(self, soupy_table: Tag, auto_parse=False):
         self.soupy_table = soupy_table
@@ -30,36 +65,30 @@ class HtmlTable:
     def parse(self):
         self.soupy_items = self.soupy_table.find_all('tr')
 
+        print(self)
 
-class HtmlParser:
+
+class HtmlParser(TableContainer):
     html_text: str
     auto_parse = False
-    soupy_table_tags: List[HtmlTable] = None
-    soupy_enumeration_with_header_pairs: List[Tuple[Tag, Tag]] = None
 
     soup: BeautifulSoup = None
+
+    soupy_table_tags: List[HtmlTableTagParser] = None
+    soupy_enumeration_tags: List[HtmlTableEnumerationParser] = None
 
     def __init__(self, html_text: str, auto_parse=False):
         self.html_text = html_text
         self.auto_parse = auto_parse
+
         self.soup = BeautifulSoup(self.html_text, HTML_PARSER)
 
         if auto_parse:
             self.parse()
 
     def parse(self):
-        self.soupy_table_tags = [HtmlTable(t, auto_parse=self.auto_parse) for t in self.soup.find_all('table')]
-
-        tag_set = self.soup.find_all(name=('ol', 'p'))
-        # This should be impossible, but when did a sanity check ever hurt?
-        if len(tag_set) == 0:
-            self.soupy_enumeration_with_header_pairs = []
-            return
-
-        before, after = iter(tag_set), iter(tag_set)
-        next(after)
-        self.soupy_enumeration_with_header_pairs = [(b if b.name == 'p' else None, a)
-                                                    for b, a in zip(before, after) if a.name == 'ol']
+        self.soupy_table_tags = [HtmlTableTagParser(t, auto_parse=self.auto_parse) for t in self.soup.find_all('table')]
+        self.soupy_enumeration_tags = [HtmlTableEnumerationParser(ol, auto_parse=self.auto_parse) for ol in self.soup.find_all('ol')]
 
 
 headered_enumeration_submission_example = \
@@ -86,9 +115,9 @@ if __name__ == '__main__':
                                                    )]
     parsers = [HtmlParser(s.selftext_html, auto_parse=True) for s in things]
     random_mention = next(mention for mention in Reddit.r.inbox.all() if comment_contains_username(mention))
-    work = WorkNode(WorkloadType.username_mention, args=(random_mention,))
-    work.do_all_work()
-    print(RenderTree(work))
+    # work = WorkNode(WorkloadType.username_mention, args=(random_mention,))
+    # work.do_all_work()
+    # print(RenderTree(work))
 
     soup = BeautifulSoup(random_mention.submission.selftext_html, 'html.parser')
     parser = HtmlParser(random_mention.submission.selftext_html, auto_parse=True)
