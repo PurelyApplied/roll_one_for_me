@@ -3,3 +3,5 @@ typing==3.6.2
 google-cloud-logging==1.10.0
 anytree==2.5.0
 beautifulsoup4==4.7.1
+dice==2.4.0
+numpy==1.16.1
