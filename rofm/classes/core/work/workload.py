@@ -25,11 +25,18 @@ from enum import Enum, auto
 from functools import wraps
 from typing import Dict, Tuple, Optional, List, Callable, Any
 
-from anytree import LevelOrderIter, NodeMixin, PreOrderIter
-from praw.models import Comment, Submission
-
+from anytree import NodeMixin, PreOrderIter
+from praw.models import Comment, Submission, Message
 
 # noinspection PyMethodParameters
+from rofm.classes.html_parsers import CommentParser, SubmissionParser
+from rofm.classes.tables import Table
+from rofm.classes.util.decorators import with_class_logger
+from rofm.classes.util.misc import split_iterable, get_text_from_comment_submission_or_message
+
+logging.getLogger().setLevel(logging.DEBUG)
+
+
 class AutoName(Enum):
     def _generate_next_value_(name, start, count, last_values):
         return name
@@ -79,31 +86,17 @@ class Workload:
     output = None
 
 
-def split_iterable(iterable, split_condition):
-    list_satisfying = []
-    list_not_satisfying = []
-    for item in iterable:
-        if split_condition(item):
-            list_satisfying.append(item)
-        else:
-            list_not_satisfying.append(item)
-    return list_satisfying, list_not_satisfying
-
-
+@with_class_logger
 class WorkNode(Workload, NodeMixin):
-    """The WorkNode is the fundamental unit for our workload graph.
-    Each WorkNode corresponds to one WorkloadType, executing the function associated to that type with the
-    @WorkNode.workload_resolver decorator.  See the decorator's docstring for more information.
-    """
-
-    # This is populated via the @workload_resolver decorator.
-    work_resolution: Dict[WorkloadType, Callable[[Any], Optional[typing.Iterable['WorkNode']]]] = {}
-    logger = logging.getLogger(f"{__name__}::WorkNode")
-
     def __init__(self, work_type: WorkloadType, args=(), *, name=None, parent=None):
         super(WorkNode, self).__init__(work_type, args)
         self.parent = parent
         self.name = name if name else f"'{work_type.name}'"
+
+    def __repr__(self):
+        rep = f"{self.name}"
+        rep += f" :: output = {self.output}" if self.output else ""
+        return f"<WorkNode {rep}>"
 
     def do_all_work(self):
         for node in PreOrderIter(self):
@@ -113,7 +106,7 @@ class WorkNode(Workload, NodeMixin):
         """Examine the type of work you are and delegate it out."""
         self.logger.info(f"Node {self} is doing work...")
 
-        resolver = self.work_resolution[self.work_type]
+        resolver = WorkResolver.get(self.work_type)
         self.logger.debug(f"Resolving work of {self} via: {resolver.__name__}(*{self.args}, **{self.kwargs}")
         new_work, self.output = resolver(*self.args, **self.kwargs)
 
@@ -122,14 +115,11 @@ class WorkNode(Workload, NodeMixin):
                 child.parent = self
         self.finished = True
 
-    def __repr__(self):
-        rep = f"{self.name}"
-        rep += f" :: output = {self.output}" if self.output else ""
-        return f"<WorkNode {rep}>"
 
-    def work(self):
-        for node in LevelOrderIter(self):
-            node.__do_work()
+@with_class_logger
+class WorkResolverContainer:
+    # These are registered via the decorator below.
+    work_resolution: Dict[WorkloadType, Callable[[Any], Optional[typing.Iterable['WorkNode']]]] = {}
 
     @classmethod
     def _register_resolver(cls, work_type, registered_resolver, override=False):
@@ -137,6 +127,10 @@ class WorkNode(Workload, NodeMixin):
         assert override or work_type not in cls.work_resolution, f"Resolver for {work_type} already present."
         cls.logger.info(f"Registering resolver {work_type} -> {registered_resolver.__name__}")
         cls.work_resolution[work_type] = registered_resolver
+
+    @classmethod
+    def get(cls, item, default=None):
+        return cls.work_resolution.get(item, default)
 
     @classmethod
     def workload_resolver(cls, *work_types, override=False):
@@ -152,17 +146,27 @@ class WorkNode(Workload, NodeMixin):
             @wraps(f)
             def decorated_function(*args, **kwargs) -> Tuple[typing.Iterable[WorkNode],
                                                              Optional[typing.Iterable[WorkloadOutput]]]:
-                base_function_return_value = f(*args, **kwargs)
+                try:
+                    base_function_return_value = f(*args, **kwargs)
+                except TypeError as e:
+                    raise TypeError(f"TypeError in function {f.__name__}.  Probably incorrect arguments passed.") from e
+                except Exception as e:
+                    # For stability, log the exception but don't throw it back up.
+                    base_function_return_value = e
+
                 # Zero return arguments:
                 if base_function_return_value is None:
                     return [], None
 
-                # One return argument:
+                # One return argument -- A single WorkNode is new work, else it's no new work and a return value
                 if not isinstance(base_function_return_value, collections.Iterable):
                     if isinstance(base_function_return_value, WorkNode):
                         return [base_function_return_value], None
                     else:
                         return [], base_function_return_value
+                # One return argument, iterable because it's a string.
+                elif isinstance(base_function_return_value, str):
+                    return [], base_function_return_value
 
                 # Separate out the WorkNode types to become children.
                 workload, outputs = split_iterable(base_function_return_value,
@@ -176,59 +180,77 @@ class WorkNode(Workload, NodeMixin):
         return decorator
 
 
-@WorkNode.workload_resolver(WorkloadType.parse_top_level_comments)
-def scan_top_level_comments(comments: List[Comment]):
-    return [WorkNode(WorkloadType.parse_comment_for_table, args=(comment,), name=f"Top-level comment {i + 1}")
-            for i, comment in enumerate(comments)]
+@with_class_logger
+class WorkResolver(WorkResolverContainer):
+    """This class handles simple work generation and delegation.
+    For instance, the resolver for WorkType.parse_top_level_comments identifies the top level comments, and
+    returns the WorkNode for parsing each individual comment, to be handled downstream.
+    """
 
+    @staticmethod
+    @WorkResolverContainer.workload_resolver(WorkloadType.parse_top_level_comments)
+    def scan_top_level_comments(comments: List[Comment]):
+        return [WorkNode(WorkloadType.parse_comment_for_table, args=(comment,), name=f"Top-level comment {i + 1}")
+                for i, comment in enumerate(comments)]
 
-@WorkNode.workload_resolver(WorkloadType.parse_comment_for_table)
-def scan_comment_for_table(mention: Comment):
-    return WorkNode(WorkloadType.parse_arbitrary_text_for_table, args=(mention.body,))
+    @staticmethod
+    @WorkResolverContainer.workload_resolver(WorkloadType.parse_comment_for_table)
+    def parse_comment_for_table(comment: Comment):
+        comment_parser = CommentParser(comment, auto_parse=True)
+        return [WorkNode(WorkloadType.roll_table, (t,)) for t in comment_parser.tables] or "No table found in comment"
 
+    @staticmethod
+    @WorkResolverContainer.workload_resolver(WorkloadType.roll_table)
+    def roll_table(table: Table):
+        return table.roll()
 
-# @WorkNode.workload_resolver(WorkloadType.parse_arbitrary_text_for_table)
-# def scan_text_for_table(text: str):
-#     table_source = TableSourceFromText(text, "meaningless descriptor")
-#     if table_source.has_tables():
-#         return [WorkNode(WorkloadType.roll_table, args=(t,), name=f"Roll table {t.header}")
-#                 for t in table_source.tables]
+    @staticmethod
+    @WorkResolverContainer.workload_resolver(WorkloadType.parse_op)
+    def parse_comment_for_table(submission: Submission):
+        submission_parser = SubmissionParser(submission, auto_parse=True)
+        return [WorkNode(WorkloadType.roll_table, (t,)) for t in submission_parser.tables] or "No table found in submission"
 
+    @staticmethod
+    @WorkResolverContainer.workload_resolver(WorkloadType.private_message)
+    def process_private_message(mention: Comment):
 
-@WorkNode.workload_resolver(WorkloadType.parse_op)
-def scan_submission_for_table(op: Submission):
-    return WorkNode(WorkloadType.parse_arbitrary_text_for_table, args=(op.selftext,))
+        raise NotImplementedError(f"{__name__} not implemented")
 
+    @staticmethod
+    @WorkResolverContainer.workload_resolver(WorkloadType.parse_for_reddit_domain_urls)
+    def scan_for_reddit_links(obj: typing.Union[Comment, Submission, Message]):
+        html_text = get_text_from_comment_submission_or_message(obj)
+        raise NotImplementedError(f"{__name__} not implemented")
 
-@WorkNode.workload_resolver(WorkloadType.username_mention)
-def process_username_mention(mention: Comment):
-    # Until it is decided otherwise, a mention gets three actions:
-    # (1) Look at the comment itself for a table
-    # (2) Look for reddit-domain links to parse.
-    # (2.1) Distinguish from links to submission (which also get top-level comments) and
-    # (2.2) Comments, which maybe get the full treatment?
-    # (3) Look at the OP
-    # (4) Look at the top-level comments.
-    #
-    op = mention.submission
-    top_level_comments = list(op.comments)
-    return (WorkNode(WorkloadType.parse_comment_for_table, args=(mention,), name="Look in mention for tables"),
-            # WorkNode(WorkloadType.parse_for_reddit_domain_urls, args=(mention,), name="Search for Reddit links"),
-            WorkNode(WorkloadType.parse_op, args=(op,), name="Search OP for tables"),
-            WorkNode(WorkloadType.parse_top_level_comments, args=(top_level_comments,),
-                     name="Search top-level comments for tables."),)
-    pass
+    @staticmethod
+    @WorkResolverContainer.workload_resolver(WorkloadType.username_mention)
+    def process_username_mention(mention: Comment):
+        # Until it is decided otherwise, a mention gets three actions:
+        # (1) Look at the comment itself for a table
+        # (2) Look for reddit-domain links to parse.
+        # (2.1) Distinguish from links to submission (which also get top-level comments) and
+        # (2.2) Comments, which maybe get the full treatment?
+        # (3) Look at the OP
+        # (4) Look at the top-level comments.
+        #
+        op = mention.submission
+        top_level_comments = list(op.comments)
+        if mention in top_level_comments:
+            top_level_comments.remove(mention)
+        return (WorkNode(WorkloadType.parse_comment_for_table, args=(mention,), name="Look in mention for tables"),
+                WorkNode(WorkloadType.parse_for_reddit_domain_urls, args=(mention,), name="Search for Reddit links"),
+                WorkNode(WorkloadType.parse_op, args=(op,), name="Search OP for tables"),
+                WorkNode(WorkloadType.parse_top_level_comments, args=(top_level_comments,),
+                         name=f"Search {len(top_level_comments)} different top-level comments for tables."),)
 
 
 if __name__ == '__main__':
-    # rofm.classes.core.work.workload_resolvers.load_resolvers()
-
-    resolved, unresolved = split_iterable(WorkloadType, lambda x: WorkNode.work_resolution.get(x, None) is not None)
+    resolved, unresolved = split_iterable(WorkloadType, lambda x: WorkResolver.get(x, None) is not None)
     for _type in resolved:
-        _resolver = WorkNode.work_resolution.get(_type)
-        print(f"Type {_type} resolved by {_resolver.__name__}")
+        _resolver = WorkResolver.get(_type, None)
+        print(f"Type WorkResolver.{_type} resolved by {_resolver.__name__}")
 
     print()
     for _type in unresolved:
-        print(f"No resolver yet for {_type}")
+        print(f"No resolver yet for WorkResolver.{_type}")
 

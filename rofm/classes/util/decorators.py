@@ -5,6 +5,11 @@ import logging
 import unittest
 from functools import wraps
 
+logging.getLogger().setLevel(logging.DEBUG)
+def with_class_logger(cls):
+    cls.logger = logging.getLogger(f"{cls.__name__}")
+    return cls
+
 
 def static_vars(**kwargs):
     # Credit: https://stackoverflow.com/questions/279561/

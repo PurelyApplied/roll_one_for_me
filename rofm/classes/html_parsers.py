@@ -4,6 +4,7 @@ from typing import List
 
 import dice
 from bs4 import Tag, BeautifulSoup
+from praw.models import Submission, Comment
 from pyparsing import ParseException, ParseFatalException
 
 from rofm.classes.tables import Table, SimpleTable, WeightedTable
@@ -134,7 +135,6 @@ class HtmlParser(TableContainer):
             for enum_tag in self.soupy_enumeration_tags:
                 self.tables.extend(enum_tag.tables)
 
-
     def parse(self):
         self.soupy_table_tags = []
         for i, t in enumerate(self.soup.find_all('table')):
@@ -147,6 +147,27 @@ class HtmlParser(TableContainer):
             print(f"Parsing enumeration block {i+1}...")
             self.soupy_enumeration_tags.append(HtmlTableEnumerationParser(ol, auto_parse=self.auto_parse))
             print(f"Parsing enumeration block {i+1} complete")
+
+
+class SubmissionParser(HtmlParser):
+    def __init__(self, submission: Submission, auto_parse=False):
+        html = submission.selftext_html
+        super(SubmissionParser, self).__init__(html, auto_parse)
+
+
+class CommentParser(HtmlParser):
+    def __init__(self, comment: Comment, auto_parse=False):
+        html = comment.body_html
+        super(CommentParser, self).__init__(html, auto_parse)
+
+
+def get_links_from_text(html_text, restrict_by_domain="reddit.com"):
+    soup = BeautifulSoup(html_text, HTML_PARSER)
+    all_links = soup.findAll('a')
+    return [(link.text, link['href'])
+            for link in all_links
+            if restrict_by_domain is None
+            or restrict_by_domain in link['href']]
 
 
 def string_is_die_roll(s):

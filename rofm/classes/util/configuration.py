@@ -5,7 +5,7 @@ import os.path
 from enum import Enum
 from os import path
 
-from rofm.classes.util.interactive import prompt_for_yes_no
+from rofm.classes.util.misc import prompt_for_yes_no
 
 
 class Config:
