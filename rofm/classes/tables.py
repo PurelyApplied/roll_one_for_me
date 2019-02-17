@@ -11,13 +11,17 @@ class Table:
     dice: str
     description: str = ''
     lookup_table: Dict[int, Any] = field(default_factory=dict)
+    # A container for table metadata, such as if the die provided was presumed from the input set or explicitly named.
+    meta: Dict = field(default_factory=dict)
 
     def __str__(self):
         return f"{self.dice} table{': ' if self.description else ''}{self.description}"
 
     def roll(self):
-        outcome = int(dice.roll(self.dice))
-        return self.get(outcome)
+        return self.get(self.roll_dice())
+
+    def roll_dice(self):
+        return int(dice.roll(self.dice))
 
     def get(self, outcome):
         return self.lookup_table[outcome]
@@ -49,9 +53,10 @@ class SimpleTable(Table):
 @dataclass
 class WeightedTable(Table):
     outcomes: List[Any] = field(default_factory=list, repr=False)
-    ranges: List[Tuple[int]] = field(default_factory=list ,repr=False)    # inclusive
+    ranges: List[Tuple[int]] = field(default_factory=list, repr=False)
 
     def __init__(self, roll, outcomes, ranges, description=''):
+        """Expected inclusive ranges, e.g., WeightedTable('2d4', ['2-4', '5', '6-8'], [(2, 4), (5, 5), (6, 8)])"""
         self.outcomes = outcomes
         self.ranges = ranges
 

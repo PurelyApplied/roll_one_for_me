@@ -41,7 +41,7 @@ def answer_username_mentions():
     mentions = Reddit.get_unread_username_mentions()
     logging.info("Username mentions in this pass: {}".format(len(mentions)))
     for user_mention in mentions:
-        this_mention_workload = WorkNode(WorkloadType.username_mention,
+        this_mention_workload = WorkNode(WorkloadType.request_type_username_mention,
                                          user_mention,
                                          name=f"Mention from {user_mention.author}")
         this_mention_workload.do_all_work()

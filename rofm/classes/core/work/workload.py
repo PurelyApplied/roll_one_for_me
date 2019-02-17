@@ -46,29 +46,22 @@ class AutoName(Enum):
 class WorkloadType(str, AutoName):
     """Every Workload / WorkNode should refer to a definitive type to determine behavior."""
     # Level "zero" request types
-    username_mention = auto()
-    private_message = auto()
-    chat = auto()
+    request_type_username_mention = auto()
+    request_type_private_message = auto()
+    request_type_chat = auto()
 
     # Parsing actions
-    parse_op = auto()
     parse_for_reddit_domain_urls = auto()
     parse_top_level_comments = auto()
     parse_item_for_tables = auto()
-    parse_table = auto()
-    parse_wide_table = auto()
-    perform_basic_roll = auto()
-    perform_compound_roll = auto()
 
     # Rolling actions
+    roll_table = auto()
+    roll_for_table_outcome = auto()
     roll_stats = auto()
     roll_specific_request = auto()
-    roll_table = auto()
-    roll_this_die = auto()
 
     # Other actions
-    respond_with_private_message_apology = auto()
-    default_request = auto()
     follow_link = auto()
 
 
@@ -155,7 +148,7 @@ class WorkResolverContainer:
                     raise TypeError(f"TypeError in function {f.__name__}.  Probably incorrect arguments passed.") from e
                 except Exception as e:
                     # For stability, log the exception but don't throw it back up.
-                    base_function_return_value = e
+                    base_function_return_value = f"Resolver function {f.__name__} failed with exception: {e}"
 
                 # Zero return arguments:
                 if base_function_return_value is None:
@@ -199,16 +192,22 @@ class WorkResolver(WorkResolverContainer):
     @staticmethod
     @WorkResolverContainer.workload_resolver(WorkloadType.parse_item_for_tables)
     def parse_item_for_table(item: typing.Union[Comment, Message, Submission]):
-        return [WorkNode(WorkloadType.roll_table, t, name="Roll table")
+        return [WorkNode(WorkloadType.roll_table, t, name=f"Roll table: {t.description}")
                 for t in CMSParser(item, auto_parse=True).tables] or f"No table found in {str(type(item).__name__).lower()}"
 
     @staticmethod
     @WorkResolverContainer.workload_resolver(WorkloadType.roll_table)
     def roll_table(table: Table):
-        return table.roll()
+        return WorkNode(WorkloadType.roll_for_table_outcome, table, name="Get table outcome")
 
     @staticmethod
-    @WorkResolverContainer.workload_resolver(WorkloadType.private_message)
+    @WorkResolverContainer.workload_resolver(WorkloadType.roll_for_table_outcome)
+    def perform_table_roll(table: Table):
+        dice_roll = table.roll_dice()
+        return [table.dice, dice_roll, table.get(dice_roll)] + ([table.meta] if table.meta else [])
+
+    @staticmethod
+    @WorkResolverContainer.workload_resolver(WorkloadType.request_type_private_message)
     def process_private_message(message: Message):
         return [WorkNode(WorkloadType.parse_for_reddit_domain_urls, message,
                          name="Scan for urls in this PM."),
@@ -223,7 +222,7 @@ class WorkResolver(WorkResolverContainer):
         reddit_links = get_links_from_text(html_text, 'reddit.com')
         return [WorkNode(WorkloadType.follow_link, href,
                          name=f"Considering following link {(text, href)}")
-                for text, href in reddit_links]
+                for text, href in reddit_links] or "None found"
 
     @staticmethod
     @WorkResolverContainer.workload_resolver(WorkloadType.follow_link)
@@ -235,7 +234,7 @@ class WorkResolver(WorkResolverContainer):
                         name=f"Looking for tables at link '{link_href}")
 
     @staticmethod
-    @WorkResolverContainer.workload_resolver(WorkloadType.username_mention)
+    @WorkResolverContainer.workload_resolver(WorkloadType.request_type_username_mention)
     def process_username_mention(mention: Comment):
         # Until it is decided otherwise, a mention gets three actions:
         # (1) Look at the comment itself for a table
@@ -260,7 +259,7 @@ class WorkResolver(WorkResolverContainer):
 
 
 if __name__ == '__main__':
-    resolved, unresolved = split_iterable(WorkloadType, lambda x: WorkResolver.get(x, None) is not None)
+    resolved, unresolved = split_iterable(WorkloadType, lambda x: WorkResolver.get(x, "missing") is not "missing")
     for _type in resolved:
         _resolver = WorkResolver.get(_type, None)
         print(f"Type WorkResolver.{_type} resolved by {_resolver.__name__}")

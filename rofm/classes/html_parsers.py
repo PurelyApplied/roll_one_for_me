@@ -38,9 +38,10 @@ class HtmlTableEnumerationParser(TableContainer):
         self.soupy_items = soupy_enumeations.find_all('li')
 
         if auto_parse:
-            dice_roll, desc = self._get_roll_and_dec(self.possible_header)
+            dice_roll, desc, meta = self._get_roll_and_dec(self.possible_header)
 
             table = SimpleTable(dice_roll, [item.text for item in self.soupy_items], description=desc)
+            table.meta = meta  # TODO make this post-creation assignment not suck.
             self.tables = [table]
 
     def _get_roll_and_dec(self, possibly_a_header):
@@ -49,9 +50,9 @@ class HtmlTableEnumerationParser(TableContainer):
         stripped_and_rejoined = " ".join(possibly_a_header.stripped_strings)
         first, rest = stripped_and_rejoined.split(" ", 1)
         if string_is_die_roll(first):
-            return first, rest
+            return first, rest, {}
         else:
-            return f"d{len(self.soupy_items)}", "A free-standing enumeration"
+            return f"d{len(self.soupy_items)}", "A free-standing enumeration", {'inferred dice': True}
 
 
 class HtmlTableTagParser(TableContainer):
