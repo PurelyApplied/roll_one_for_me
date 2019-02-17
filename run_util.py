@@ -19,6 +19,11 @@ wide_table_submission_example = \
 
 if __name__ == '__main__':
     Reddit.login()
+    pm = next(Reddit.r.inbox.messages())
+    node = WorkNode(WorkloadType.private_message, pm, name="test pm")
+    node.do_all_work()
+    print(RenderTree(node))
+    print("bye")
     # some_links = (headered_enumeration_submission_example,
     #               headered_enumeration_submission_example2,
     #               unheadered_enumeration_submisison_example,
@@ -34,12 +39,11 @@ if __name__ == '__main__':
     #     print()
     # look_here = [{'link': l, 'parser': p} for p, l in zip(parsers, some_links)]
     # pass
-    Reddit.r.inbox.messages()
     random_mention = next(mention for mention in Reddit.r.inbox.all() if comment_contains_username(mention))
-    work = WorkNode(WorkloadType.username_mention, args=(random_mention,))
+    work = WorkNode(WorkloadType.username_mention, random_mention)
     work.do_all_work()
     print(RenderTree(work))
-
+    #
     # soup = BeautifulSoup(random_mention.submission.selftext_html, 'html.parser')
     # parser = HtmlParser(random_mention.submission.selftext_html, auto_parse=True)
 
@@ -48,3 +52,5 @@ if __name__ == '__main__':
 # Also rolled the random enumeration for the mission-statement.  Maybe lock free-standing and others by a [[roll all]]
 
 # TODO: Improve header detection for free-standing enumerations.
+
+# TODO d100 subreddit

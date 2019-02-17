@@ -20,11 +20,11 @@ def prompt_for_yes_no(prompt_string, default=None):
         print("Please respond with 'yes' or 'no'\n")
 
 
-def get_text_from_comment_submission_or_message(obj: Union[Comment, Submission, Message], get_html=False):
+def get_html_from_cms(obj: Union[Comment, Submission, Message]):
     if isinstance(obj, Comment) or isinstance(obj, Message):
-        return obj.body_html if get_html else obj.body
+        return obj.body_html
     if isinstance(obj, Submission):
-        return obj.selftext_html if get_html else obj.selftext
+        return obj.selftext_html
     raise TypeError(f"Expected Comment, Submission, or Message in {__name__}")
 
 

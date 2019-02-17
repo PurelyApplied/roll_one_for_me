@@ -273,6 +273,8 @@ class Request:
             self.get_default_sources()
 
     def _maybe_add_source(self, source, desc):
+        if source is None:
+            return
         """Looks at PRAW submission and adds it if tables can be found."""
         t = TableSource(source, desc)
         if t.has_tables():

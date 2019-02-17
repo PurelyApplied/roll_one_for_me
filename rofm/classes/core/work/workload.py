@@ -29,10 +29,11 @@ from anytree import NodeMixin, PreOrderIter
 from praw.models import Comment, Submission, Message
 
 # noinspection PyMethodParameters
-from rofm.classes.html_parsers import CommentParser, SubmissionParser
+from rofm.classes.html_parsers import CMSParser, get_links_from_text
+from rofm.classes.reddit import Reddit
 from rofm.classes.tables import Table
 from rofm.classes.util.decorators import with_class_logger
-from rofm.classes.util.misc import split_iterable, get_text_from_comment_submission_or_message
+from rofm.classes.util.misc import split_iterable, get_html_from_cms
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -53,8 +54,7 @@ class WorkloadType(str, AutoName):
     parse_op = auto()
     parse_for_reddit_domain_urls = auto()
     parse_top_level_comments = auto()
-    parse_comment_for_table = auto()
-    parse_arbitrary_text_for_table = auto()
+    parse_item_for_tables = auto()
     parse_table = auto()
     parse_wide_table = auto()
     perform_basic_roll = auto()
@@ -88,15 +88,15 @@ class Workload:
 
 @with_class_logger
 class WorkNode(Workload, NodeMixin):
-    def __init__(self, work_type: WorkloadType, args=(), *, name=None, parent=None):
+    def __init__(self, work_type: WorkloadType, *args, name=None, parent=None):
         super(WorkNode, self).__init__(work_type, args)
         self.parent = parent
         self.name = name if name else f"'{work_type.name}'"
 
     def __repr__(self):
         rep = f"{self.name}"
-        rep += f" :: output = {self.output}" if self.output else ""
-        return f"<WorkNode {rep}>"
+        rep += f" :: {self.output}" if self.output else ""
+        return f"<WorkNode: {rep}>"
 
     def do_all_work(self):
         for node in PreOrderIter(self):
@@ -130,7 +130,10 @@ class WorkResolverContainer:
 
     @classmethod
     def get(cls, item, default=None):
-        return cls.work_resolution.get(item, default)
+        resolver = cls.work_resolution.get(item, default)
+        if resolver:
+            return resolver
+        raise KeyError(f"Could not get resolver for {item}")
 
     @classmethod
     def workload_resolver(cls, *work_types, override=False):
@@ -190,14 +193,14 @@ class WorkResolver(WorkResolverContainer):
     @staticmethod
     @WorkResolverContainer.workload_resolver(WorkloadType.parse_top_level_comments)
     def scan_top_level_comments(comments: List[Comment]):
-        return [WorkNode(WorkloadType.parse_comment_for_table, args=(comment,), name=f"Top-level comment {i + 1}")
+        return [WorkNode(WorkloadType.parse_item_for_tables, comment, name=f"Top-level comment {i + 1:2d} ({comment})")
                 for i, comment in enumerate(comments)]
 
     @staticmethod
-    @WorkResolverContainer.workload_resolver(WorkloadType.parse_comment_for_table)
-    def parse_comment_for_table(comment: Comment):
-        comment_parser = CommentParser(comment, auto_parse=True)
-        return [WorkNode(WorkloadType.roll_table, (t,)) for t in comment_parser.tables] or "No table found in comment"
+    @WorkResolverContainer.workload_resolver(WorkloadType.parse_item_for_tables)
+    def parse_item_for_table(item: typing.Union[Comment, Message, Submission]):
+        return [WorkNode(WorkloadType.roll_table, t, name="Roll table")
+                for t in CMSParser(item, auto_parse=True).tables] or f"No table found in {str(type(item).__name__).lower()}"
 
     @staticmethod
     @WorkResolverContainer.workload_resolver(WorkloadType.roll_table)
@@ -205,22 +208,31 @@ class WorkResolver(WorkResolverContainer):
         return table.roll()
 
     @staticmethod
-    @WorkResolverContainer.workload_resolver(WorkloadType.parse_op)
-    def parse_comment_for_table(submission: Submission):
-        submission_parser = SubmissionParser(submission, auto_parse=True)
-        return [WorkNode(WorkloadType.roll_table, (t,)) for t in submission_parser.tables] or "No table found in submission"
-
-    @staticmethod
     @WorkResolverContainer.workload_resolver(WorkloadType.private_message)
-    def process_private_message(mention: Comment):
-
-        raise NotImplementedError(f"{__name__} not implemented")
+    def process_private_message(message: Message):
+        return [WorkNode(WorkloadType.parse_for_reddit_domain_urls, message,
+                         name="Scan for urls in this PM."),
+                WorkNode(WorkloadType.parse_item_for_tables, message,
+                         name="Scan for a table within this PM.")
+                ]
 
     @staticmethod
     @WorkResolverContainer.workload_resolver(WorkloadType.parse_for_reddit_domain_urls)
     def scan_for_reddit_links(obj: typing.Union[Comment, Submission, Message]):
-        html_text = get_text_from_comment_submission_or_message(obj)
-        raise NotImplementedError(f"{__name__} not implemented")
+        html_text = get_html_from_cms(obj)
+        reddit_links = get_links_from_text(html_text, 'reddit.com')
+        return [WorkNode(WorkloadType.follow_link, href,
+                         name=f"Considering following link {(text, href)}")
+                for text, href in reddit_links]
+
+    @staticmethod
+    @WorkResolverContainer.workload_resolver(WorkloadType.follow_link)
+    def follow_link(link_href):
+        reddit_item = Reddit.try_to_follow_link(link_href)
+        if reddit_item is None:
+            return "Refusing to follow non-Reddit link."
+        return WorkNode(WorkloadType.parse_item_for_tables, reddit_item,
+                        name=f"Looking for tables at link '{link_href}")
 
     @staticmethod
     @WorkResolverContainer.workload_resolver(WorkloadType.username_mention)
@@ -237,11 +249,14 @@ class WorkResolver(WorkResolverContainer):
         top_level_comments = list(op.comments)
         if mention in top_level_comments:
             top_level_comments.remove(mention)
-        return (WorkNode(WorkloadType.parse_comment_for_table, args=(mention,), name="Look in mention for tables"),
-                WorkNode(WorkloadType.parse_for_reddit_domain_urls, args=(mention,), name="Search for Reddit links"),
-                WorkNode(WorkloadType.parse_op, args=(op,), name="Search OP for tables"),
-                WorkNode(WorkloadType.parse_top_level_comments, args=(top_level_comments,),
-                         name=f"Search {len(top_level_comments)} different top-level comments for tables."),)
+        return (WorkNode(WorkloadType.parse_item_for_tables, mention,
+                         name="Look in your mention for tables"),
+                WorkNode(WorkloadType.parse_for_reddit_domain_urls, mention,
+                         name="Search your mention for Reddit links"),
+                WorkNode(WorkloadType.parse_item_for_tables, op,
+                         name="Search OP for tables"),
+                WorkNode(WorkloadType.parse_top_level_comments, top_level_comments,
+                         name=f"Search {len(top_level_comments)} top-level comments for tables."),)
 
 
 if __name__ == '__main__':

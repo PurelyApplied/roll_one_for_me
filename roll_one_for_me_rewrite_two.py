@@ -42,7 +42,7 @@ def answer_username_mentions():
     logging.info("Username mentions in this pass: {}".format(len(mentions)))
     for user_mention in mentions:
         this_mention_workload = WorkNode(WorkloadType.username_mention,
-                                         args=(user_mention,),
+                                         user_mention,
                                          name=f"Mention from {user_mention.author}")
         this_mention_workload.do_all_work()
         user_mention.reply(this_mention_workload.get_response_text())

@@ -1,13 +1,16 @@
 #!/usr/env/bin python3
+import logging
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Union
 
 import dice
 from bs4 import Tag, BeautifulSoup
-from praw.models import Submission, Comment
+from praw.models import Submission, Comment, Message
 from pyparsing import ParseException, ParseFatalException
 
 from rofm.classes.tables import Table, SimpleTable, WeightedTable
+from rofm.classes.util.decorators import with_class_logger
+from rofm.classes.util.misc import get_html_from_cms
 
 HTML_PARSER = 'html.parser'
 DASHES = ('-', u'–', u'—')
@@ -112,6 +115,7 @@ class HtmlTableTagParser(TableContainer):
         return roll, outcome_ranges
 
 
+@with_class_logger
 class HtmlParser(TableContainer):
     html_text: str
     auto_parse = False
@@ -138,27 +142,21 @@ class HtmlParser(TableContainer):
     def parse(self):
         self.soupy_table_tags = []
         for i, t in enumerate(self.soup.find_all('table')):
-            print(f"Parsing table block {i+1}...")
+            self.logger.debug(f"Parsing table block {i+1}...")
             self.soupy_table_tags.append(HtmlTableTagParser(t, auto_parse=self.auto_parse))
-            print(f"Parsing table block {i+1} complete")
+            self.logger.debug(f"Parsing table block {i+1} complete")
 
         self.soupy_enumeration_tags = []
         for i, ol in enumerate(self.soup.find_all('ol')):
-            print(f"Parsing enumeration block {i+1}...")
+            self.logger.debug(f"Parsing enumeration block {i+1}...")
             self.soupy_enumeration_tags.append(HtmlTableEnumerationParser(ol, auto_parse=self.auto_parse))
-            print(f"Parsing enumeration block {i+1} complete")
+            self.logger.debug(f"Parsing enumeration block {i+1} complete")
 
 
-class SubmissionParser(HtmlParser):
-    def __init__(self, submission: Submission, auto_parse=False):
-        html = submission.selftext_html
-        super(SubmissionParser, self).__init__(html, auto_parse)
-
-
-class CommentParser(HtmlParser):
-    def __init__(self, comment: Comment, auto_parse=False):
-        html = comment.body_html
-        super(CommentParser, self).__init__(html, auto_parse)
+class CMSParser(HtmlParser):
+    def __init__(self, cms: Union[Comment, Message, Submission], auto_parse=False):
+        html = get_html_from_cms(cms)
+        super(CMSParser, self).__init__(html, auto_parse)
 
 
 def get_links_from_text(html_text, restrict_by_domain="reddit.com"):
@@ -175,7 +173,7 @@ def string_is_die_roll(s):
         dice.parse_expression(s)
         return True
     except (ParseException, ParseFatalException) as e:
-        print(f"Got exception {e} when rolling {s}.  Assuming it is not a valid roll string.")
+        logging.getLogger().debug(f"Got exception {e} when rolling {s}.  Assuming it is not a valid roll string.")
         return False
 
 
