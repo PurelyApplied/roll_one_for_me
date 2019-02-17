@@ -1,132 +1,61 @@
 #roll_one_for_me: README.md
 
-This repository contains source code for Reddit bot /u/roll_one_for_me
-(henceforth "ROFM").  ROFM is a username-summoned bot who will generate an
-outcome provided by a random table, typically in one of the D&D
-related subreddits like /r/DnDBehindTheScreen and the affiliated
+This repository contains source code for Reddit bot /u/roll_one_for_me, a.k.a. RofM.
+It is a username-summoned bot who will generate an outcome provided by a random table,
+typically in one of the D&D related subreddits like
+/r/DnDBehindTheScreen and the affiliated
 /r/BehindTheTables being the most common.
 
-## Usage: Rolling
+RofM makes heavy use of [BeautifulSoup](https://www.crummy.com/software/BeautifulSoup/) for parsing,
+[Python-dice](https://github.com/borntyping/python-dice) for its dice roll lexicon,
+and [anytree](https://github.com/c0fec0de/anytree) for workload management.
 
-ROFM v2.0 brought with it a massive overhaul to its command lexicon.
+## Summoned behavior
 
-A user-mention of `/u/roll_one_for_me` will summon ROFM.  By default,
-ROFM will attempt to find, parse, and roll any tables in the following order (where found):
+The common use-case is to summon `/u/roll_one_for_me` via a username-mention, 
+and the bot will roll "nearby" tables.  This includes, in order:
 
 * Any tables found in the comment containing the user-mention
-* Any tables found in a `[Title][URL]` formatted link, given that the URL targets the Reddit domain.
-* Any tables found the submission text ("OP")
+* Any tables found in comments or submissions linked in the summoning user-mention
+* Any tables found the "OP" submission text
 * Any tables found in any top-level comment to the submission.
 
-Rolled results are compiled and given in a reply.
+Similarly, a private message can be sent to the bot, though the last two items do apply in this case.
 
-Users may also send ROFM a private message.  Default behavior is the
-same, but naturally limited to the text of the message and provided
-links.
+## Additional behavior requests
 
-**IMPORTANT NOTE: Links must be in the `[Text](url)` format to be noticed by ROFM.**
-  Raw URLs are not detected.
+Additional behavior may be requested by including a command in double-brackets, e.g., 
+"[[COMMAND]]".  The following are valid commands:
 
-## Specifying Behavior
+* [[<DICE>]]: Rolls the requested `<DICE>` string, using the [Python-dice](https://github.com/borntyping/python-dice) library to parse and execute rolls.
+Refer to their page for language specifics, but it works how you would expect.  For instance, 
+  [[2d8]] or [[4d6^3]].
+* More to come pending community discussion.
 
-Default behavior may be overridden using a command in the form of
-"[[COMMAND]]".  If an explicit command is given, *only* those commands
-provided will be executed.  Multiple commands will be executed in the order they are given.
-The following commands are available.
+## Tables and formatting
 
-* [[Roll DICE]]: Rolls whatever is provided by DICE is some standard
-  die notation, discussed in more detail below.  So, for instance,
-  [[Roll 2d8]] or [[Roll 4d6^3]]
+With RofM 2.0, nearly all parsing is done via BeautifulSoup against the rendered html of text.
+The bot will do well with most things using the table and enumeration formats.
 
-* [[OP]]: Rolls any tables present in the submission text
+A table-formatted table is expected to have a title-bar.  "Wide" tables are now supported.
+If a die is specified, it should exist in the upper-left box of a formatted table.
 
-* [[Top]]: Rolls any tables present in top-level comments
+An enumeration is expected to have a "header" before enumeration begins, but it is not required to do so.
+An un-headered enumeration of <N> items is assumed to be rolled via 1d<N>.
 
-* [[Organize]]: Adds an organizational comment for subsequent requests.
+## Future work
 
-* [[ANY OTHER STRING]]: Rolls any table whose header matches (case-insensitive) the provided string.
-
-
-## Usage: Tables and formatting
-
-A table must begin with a header line, which itself begins with some
-die notation.  Punctuation is ignored to allow for Reddit formatting.
-
-In the lines following the header, an enumerated list is expected.  At
-least one newline is expected between table outcomes.  Lines must begin
-with a digit, although the value of the digit is not important.  (This
-is to allow Reddit's automatic formatting, where a user may use "1."
-for every row.)  Ranges are allowed, separating values with a hyphen.
-Again, leading punctuation is ignored to allow for formatting.
-
-Table outcomes may produce additional rolls.  If a dice-string is
-detected, it will be rolled.  Additionally, an outcome may include a
-reference to another table by including a header string reference to
-that table.
-
-If the table header has a bang ("!") between the die roll and the
-header text, it will not be included in the "default" rolling and will
-only be included when called directly with a [[reference]] command, or
-when linked by another table's outcome.
-
-An example is given below, presented in "code" mode to preserve source
-without markup.
-
------
-
-    d4 This is an example.
-    
-    1.  You get 2d10 upvotes!
-    
-    2-3.  You got the boring outcome.  Oh well.
-    
-    4.  You rolled a lucky four!  Roll the [[special table]]!
-    
-    
-    d6 This is a special table
-    
-    1.  One
-    1.  Two
-    1.  Three
-    1.  2d6
-    1.  Nine
-    1.  Eighteen
-
------
-
-A maximum chain depth of 10 has been set to avoid accidental recursion or malicious use.
-
-## Dice Format:
-
-With v2.0, ROFM can now parse more sophisticated dice commands.
-Expected format is [N=1]d[K].
-
-Examples: 1d4, d6, 2d10.
-
-Basic mathematical operations are permitted, using + - / *.  Division
-uses integer division (no decimal or remainder).
-
-Examples: 2d10 + 5, 1d20-2, 1d8 * 1d2.
-
-Additionally, the operators v and ^ may be used to indicate the bottom
-or top (respectively) L dice to be used.
-
-Examples: (Roll with disadvantage:) 2d20v1, (Roll a stat:) 4d6^3
-
+I would like to add the ability for tables to link each other or for certain table outcomes to produce additional rolls,
+either of the "roll this table twice" outcomes, as the currently-disable "in-line" tables, or similar.
 
 ## Known Issues:
 
-* Since the bot constantly strips punctuation so as to avoid parsing
-  Reddit's markup, it will leave parentheses and the like open, drop a
-  plural's possessive, and so on if an entry were to end or begin with
-  them.
+* Messages sent via chat are not supported.
+The bot is backed by `praw`, and the chat does not have an officially documented API.
+If chat ever leaves "beta" and an API is documented, chat will quickly become supported.
 
-* v1.0 would roll inline tables.  This is temporarily disabled, though
-  the value itself will be rolled.  Additionally, any table references
-  present in any outcome will be rolled, since no sub-table outcomes
-  are distinguished.
+* With the 2.0 overhaul of core logic, the bot is more sensitive to formatting.
+For best results, make sure that the post renders in Reddit as a formatted table or enumeration.
+(A related benefit, however, is that links no longer have to be in the `[Text](link)` format.)
 
-* If a section header immediately following a table begins with a
-  number, it may be parsed as part of the table.  This in turn will
-  raise an error when the expected number of outcomes does not match
-  the number of "outcomes" detected.
+* v2.0 no longer rolls "in-line" tables due to its reliance on html formatting.
