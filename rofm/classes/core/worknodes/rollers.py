@@ -25,8 +25,8 @@ import dice
 from anytree import RenderTree
 
 # noinspection PyMethodParameters
-from rofm.classes.core.worknodes.core import NewWorkload, WorkloadType
-from rofm.classes.core.worknodes.requests import RequestViaPrivateMessageWorknode
+from rofm.classes.core.worknodes.core import Worknode, WorkloadType
+from rofm.classes.core.worknodes.requests import PMWorknode
 from rofm.classes.reddit import Reddit
 from rofm.classes.tables import Table
 
@@ -34,7 +34,7 @@ logging.getLogger().setLevel(logging.DEBUG)
 
 
 @dataclass
-class RollTableWorknode(NewWorkload):
+class TableWorknode(Worknode):
     args: Table
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
@@ -45,14 +45,14 @@ class RollTableWorknode(NewWorkload):
         return "asdasd"  # super(RollTableWorknode, self).__str__()
 
     def __repr__(self):
-        return super(RollTableWorknode, self).__repr__()
+        return super(TableWorknode, self).__repr__()
 
-    def do_my_work(self):
-        self.additional_work.append(PerformRollWorknode(self.args.dice))
+    def _my_work_resolver(self):
+        self.additional_work.append(AnyStrWorknode(self.args.dice))
 
 
 @dataclass
-class PerformRollWorknode(NewWorkload):
+class AnyStrWorknode(Worknode):
     args: str  # Dice string
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
@@ -63,16 +63,16 @@ class PerformRollWorknode(NewWorkload):
         return "asdasd"  # super(PerformRollWorknode, self).__str__()
 
     def __repr__(self):
-        return super(PerformRollWorknode, self).__repr__()
+        return super(AnyStrWorknode, self).__repr__()
 
-    def do_my_work(self):
+    def _my_work_resolver(self):
         return dice.roll(self.args)
 
 
 if __name__ == '__main__':
     Reddit.login()
     pm = next(Reddit.r.inbox.messages())
-    pm_node = RequestViaPrivateMessageWorknode(pm)
+    pm_node = PMWorknode(pm)
     pm_node.name = "test pm"
     pm_node.do_all_work()
 

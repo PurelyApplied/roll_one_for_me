@@ -1,16 +1,17 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Dict, Any
 
 from praw.models import Comment, Message
 
 # noinspection PyMethodParameters
-from rofm.classes.core.worknodes.core import NewWorkload, WorkloadType
-from rofm.classes.core.worknodes.parsers import ParseForRedditDomainUrls, ParseMessageWorknode, ParseCommentWorknode, \
-    ParseSubmissionWorknode, ParseTopLevelCommentsWorknode
+from rofm.classes.core.worknodes.core import Worknode, WorkloadType
+from rofm.classes.core.worknodes.parsers import (RedditDomainUrls, MessageWorknode, CommentWorknode,
+                                                 SubmissionWorknode, TopLevelCommentsWorknode)
 
 
 @dataclass
-class RequestViaPrivateMessageWorknode(NewWorkload):
+class PMWorknode(Worknode):
     args: Message
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
@@ -21,17 +22,17 @@ class RequestViaPrivateMessageWorknode(NewWorkload):
         return "asdasd"  # super(RequestViaPrivateMessageWorknode, self).__str__()
 
     def __repr__(self):
-        return super(RequestViaPrivateMessageWorknode, self).__repr__()
+        return super(PMWorknode, self).__repr__()
 
-    def do_my_work(self):
-        self.additional_work = [ParseForRedditDomainUrls(self.args),
-                                ParseMessageWorknode(self.args),
-                                ParseMessageWorknode(self.args),
+    def _my_work_resolver(self):
+        self.additional_work = [RedditDomainUrls(self.args),
+                                MessageWorknode(self.args),
+                                MessageWorknode(self.args),
                                 ]
 
 
 @dataclass
-class RequestViaUsernameMention(NewWorkload):
+class MentionWorknode(Worknode):
     args: Comment
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
@@ -42,9 +43,9 @@ class RequestViaUsernameMention(NewWorkload):
         return "asdasd"  # super(RequestViaUsernameMention, self).__str__()
 
     def __repr__(self):
-        return super(RequestViaUsernameMention, self).__repr__()
+        return super(MentionWorknode, self).__repr__()
 
-    def do_my_work(self):
+    def _my_work_resolver(self):
         # Until it is decided otherwise, a mention gets three actions:
         # (1) Look at the comment itself for a table
         # (2) Look for reddit-domain links to parse.
@@ -59,8 +60,8 @@ class RequestViaUsernameMention(NewWorkload):
             top_level_comments.remove(mention)
 
         self.additional_work = [
-            ParseCommentWorknode(mention),
-            ParseForRedditDomainUrls(mention),
-            ParseSubmissionWorknode(op),
-            ParseTopLevelCommentsWorknode(top_level_comments)
+            CommentWorknode(mention),
+            RedditDomainUrls(mention),
+            SubmissionWorknode(op),
+            TopLevelCommentsWorknode(top_level_comments)
         ]

@@ -4,7 +4,7 @@ import logging
 import logging.handlers
 import time
 
-from rofm.classes.core.worknodes.workload import WorkNode, WorkloadType
+from rofm.classes.core import worknodes
 from rofm.classes.reddit import Reddit
 from rofm.classes.util.configuration import Config, Section, Subsection
 from rofm.classes.util.decorators import static_vars, occasional
@@ -41,11 +41,9 @@ def answer_username_mentions():
     mentions = Reddit.get_unread_username_mentions()
     logging.info("Username mentions in this pass: {}".format(len(mentions)))
     for user_mention in mentions:
-        this_mention_workload = WorkNode(WorkloadType.request_type_username_mention,
-                                         user_mention,
-                                         name=f"Mention from {user_mention.author}")
+        this_mention_workload = worknodes.requests.MentionWorknode(user_mention)
         this_mention_workload.do_all_work()
-        user_mention.reply(this_mention_workload.get_response_text())
+        user_mention.reply(str(this_mention_workload))
 
 
 def answer_private_messages():

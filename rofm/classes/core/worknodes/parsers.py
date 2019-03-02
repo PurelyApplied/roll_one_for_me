@@ -7,8 +7,8 @@ from typing import Dict, List, Any, Union
 from praw.models import Comment, Submission, Message
 
 # noinspection PyMethodParameters
-from rofm.classes.core.worknodes.core import NewWorkload, FollowLinkWorknode, WorkloadType
-from rofm.classes.core.worknodes.rollers import RollTableWorknode
+from rofm.classes.core.worknodes.core import Worknode, FollowLinkWorknode, WorkloadType
+from rofm.classes.core.worknodes.rollers import TableWorknode
 from rofm.classes.html_parsers import CMSParser, get_links_from_text
 from rofm.classes.util.misc import get_html_from_cms
 
@@ -16,16 +16,16 @@ logging.getLogger().setLevel(logging.DEBUG)
 
 
 @dataclass
-class ParseTopLevelCommentsWorknode(NewWorkload):
+class TopLevelCommentsWorknode(Worknode):
     args: List[Comment]
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
     workload_type: WorkloadType = WorkloadType.parse_top_level_comments
     _name: str = "Top level comment parser"
 
-    def do_my_work(self):
+    def _my_work_resolver(self):
         for i, comment in enumerate(self.args):
-            new_work = ParseCommentWorknode(comment)
+            new_work = CommentWorknode(comment)
             new_work.metadata = {'index': i, 'source': 'Comment'}
             self.additional_work.append(new_work)
 
@@ -33,11 +33,11 @@ class ParseTopLevelCommentsWorknode(NewWorkload):
         return "asdasd"  # super(ParseTopLevelCommentsWorknode, self).__str__()
 
     def __repr__(self):
-        return super(ParseTopLevelCommentsWorknode, self).__repr__()
+        return super(TopLevelCommentsWorknode, self).__repr__()
 
 
 @dataclass
-class ParseItemWorknode(NewWorkload):
+class MixedTypeWorknode(Worknode):
     args: Union[Comment, Submission, Message]
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
@@ -48,46 +48,46 @@ class ParseItemWorknode(NewWorkload):
         return "asdasd"  # super(ParseItemWorknode, self).__str__()
 
     def __repr__(self):
-        return super(ParseItemWorknode, self).__repr__()
+        return super(MixedTypeWorknode, self).__repr__()
 
-    def do_my_work(self):
+    def _my_work_resolver(self):
         parsed_tables = CMSParser(self.args, auto_parse=True).tables
         if not parsed_tables:
             return "No tables found"
 
         for table in parsed_tables:
-            self.additional_work.append(RollTableWorknode(table))
+            self.additional_work.append(TableWorknode(table))
 
 
 @dataclass
-class ParseCommentWorknode(ParseItemWorknode):
+class CommentWorknode(MixedTypeWorknode):
     args: Comment
     name: str = "Comment parser"
 
     def __repr__(self):
-        return super(ParseCommentWorknode, self).__repr__()
+        return super(CommentWorknode, self).__repr__()
 
 
 @dataclass
-class ParseSubmissionWorknode(ParseItemWorknode):
+class SubmissionWorknode(MixedTypeWorknode):
     args: Submission
     name: str = "Submission parser"
 
     def __repr__(self):
-        return super(ParseSubmissionWorknode, self).__repr__()
+        return super(SubmissionWorknode, self).__repr__()
 
 
 @dataclass
-class ParseMessageWorknode(ParseItemWorknode):
+class MessageWorknode(MixedTypeWorknode):
     args: Message
     name: str = "Private message parser"
 
     def __repr__(self):
-        return super(ParseMessageWorknode, self).__repr__()
+        return super(MessageWorknode, self).__repr__()
 
 
 @dataclass
-class ParseForRedditDomainUrls(NewWorkload):
+class RedditDomainUrls(Worknode):
     args: Union[Comment, Submission, Message]
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
@@ -98,9 +98,9 @@ class ParseForRedditDomainUrls(NewWorkload):
         return "asdasd"  # super(ParseForRedditDomainUrls, self).__str__()
 
     def __repr__(self):
-        return super(ParseForRedditDomainUrls, self).__repr__()
+        return super(RedditDomainUrls, self).__repr__()
 
-    def do_my_work(self):
+    def _my_work_resolver(self):
         html_text = get_html_from_cms(self.args)
         reddit_links = get_links_from_text(html_text, 'reddit.com')
 

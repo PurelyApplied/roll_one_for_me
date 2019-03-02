@@ -26,8 +26,8 @@ from typing import Dict, Tuple, Optional, List, Any
 from anytree import NodeMixin, RenderTree, PreOrderIter
 
 # noinspection PyMethodParameters
-from rofm.classes.core.worknodes.parsers import ParseItemWorknode
-from rofm.classes.core.worknodes.requests import RequestViaPrivateMessageWorknode
+from rofm.classes.core.worknodes.parsers import MixedTypeWorknode
+from rofm.classes.core.worknodes.requests import PMWorknode
 from rofm.classes.reddit import Reddit
 
 logging.getLogger().setLevel(logging.DEBUG)
@@ -61,7 +61,7 @@ class WorkloadType(str, AutoName):
 
 
 @dataclass
-class NewWorkload(ABC, NodeMixin):
+class Worknode(ABC, NodeMixin):
     args: Tuple[Any]
     kwargs: Dict[str, Any]
 
@@ -76,20 +76,20 @@ class NewWorkload(ABC, NodeMixin):
     work_done: bool = field(default=None, init=False)
     output: Optional[Any] = field(default=None, init=False)
     exception: Optional[Exception] = field(default=None, init=False)
-    additional_work: List["NewWorkload"] = field(default_factory=list, init=False)
+    additional_work: List["Worknode"] = field(default_factory=list, init=False)
 
     def __init__(self, *args, **kwargs):
-        super(NewWorkload, self).__init__()
+        super(Worknode, self).__init__()
         self.args = args
         self.kwargs = kwargs
 
     def do_all_work(self):
         for node in PreOrderIter(self):
-            node.work()
+            node.do_my_work()
 
-    def work(self):
+    def do_my_work(self):
         try:
-            self.output = self.do_my_work()
+            self.output = self._my_work_resolver()
         except Exception as e:
             self.exception = e
 
@@ -99,7 +99,7 @@ class NewWorkload(ABC, NodeMixin):
         self.work_done = True
 
     @abstractmethod
-    def do_my_work(self):
+    def _my_work_resolver(self):
         pass
 
     @abstractmethod
@@ -123,7 +123,7 @@ class NewWorkload(ABC, NodeMixin):
         return f"<{display_name} :: {in_as_string} {out_as_string}>"
 
 
-class FollowLinkWorknode(NewWorkload):
+class FollowLinkWorknode(Worknode):
     args: Tuple[str, str]  # text, href
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
@@ -136,19 +136,19 @@ class FollowLinkWorknode(NewWorkload):
     def __repr__(self):
         return super(FollowLinkWorknode, self).__repr__()
 
-    def do_my_work(self):
+    def _my_work_resolver(self):
         _, link_href = self.args
         reddit_item = Reddit.try_to_follow_link(link_href)
         if reddit_item is None:
             return "Refusing to follow non-Reddit link."
 
-        self.additional_work = [ParseItemWorknode(reddit_item)]
+        self.additional_work = [MixedTypeWorknode(reddit_item)]
 
 
 if __name__ == '__main__':
     Reddit.login()
     pm = next(Reddit.r.inbox.messages())
-    pm_node = RequestViaPrivateMessageWorknode(pm)
+    pm_node = PMWorknode(pm)
     pm_node.name = "test pm"
     pm_node.do_all_work()
 
