@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-from anytree import RenderTree
 
-from rofm.classes.core.work.workload import WorkNode, WorkloadType
-from rofm.classes.reddit import Reddit, comment_contains_username
+from rofm.classes.reddit import Reddit
 
 headered_enumeration_submission_example = \
     r'https://www.reddit.com/r/DnDBehindTheScreen/comments/ain51n/party_bond_generator_tables/'
@@ -20,19 +18,19 @@ wide_table_submission_example = \
 if __name__ == '__main__':
     Reddit.login()
     pm = next(Reddit.r.inbox.messages())
-    node = WorkNode(WorkloadType.request_type_private_message, pm, name="test pm")
-    node.do_all_work()
-    node_render = RenderTree(node)
-    shifted_node_render = " " * 4 + "\n    ".join(str(node_render).split("\n"))
-    print(shifted_node_render)
-
-    random_mention = next(mention for mention in Reddit.r.inbox.all() if comment_contains_username(mention))
-    work = WorkNode(WorkloadType.request_type_username_mention, random_mention)
-    work.do_all_work()
-    render = RenderTree(work)
-    shifted_render = " " * 4 + "\n    ".join(str(render).split("\n"))
-    print(shifted_render)
-
+    # node = WorkNode(WorkloadType.request_type_private_message, pm, name="test pm")
+    # node.do_all_work()
+    # node_render = RenderTree(node)
+    # shifted_node_render = " " * 4 + "\n    ".join(str(node_render).split("\n"))
+    # print(shifted_node_render)
+    #
+    # random_mention = next(mention for mention in Reddit.r.inbox.all() if comment_contains_username(mention))
+    # work = WorkNode(WorkloadType.request_type_username_mention, random_mention)
+    # work.do_all_work()
+    # render = RenderTree(work)
+    # shifted_render = " " * 4 + "\n    ".join(str(render).split("\n"))
+    # print(shifted_render)
+#
 # TODO: 'https://www.reddit.com/r/DnDBehindTheScreen/comments/ale18z/oneroll_society_blunderbuss_engine/'
 # Sub-enumeration doesn't parse well, but that's maybe okay.  Perceived header as parent header.
 # Also rolled the random enumeration for the mission-statement.  Maybe lock free-standing and others by a [[roll all]]

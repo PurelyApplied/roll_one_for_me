@@ -2,7 +2,7 @@
 
 """This example demonstrates the flow for retrieving a refresh token.
 
-In order for this example to work your application's redirect URI must be set
+In order for this example to worknodes your application's redirect URI must be set
 to http://localhost:8080.
 
 This tool can be used to conveniently create refresh tokens for later use with

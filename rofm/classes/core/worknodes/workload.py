@@ -2,7 +2,7 @@
 """These classes define the workload for a given request.
 A single request will spawn a single Workload.
 WorkItems will be processed and grow a WorkLog, which will be a tree consisting of each job executed,
-   with possible children WorkLog items if a given WorkItem requires additional work.
+   with possible children WorkLog items if a given WorkItem requires additional worknodes.
 E.g., the following will all be represented by a single WorkItem, each spawning the next in the tree.
 * Initial request parsing
 * Parsing of a particular text for table (such as the OP or comment itself)
@@ -21,7 +21,7 @@ import collections
 import logging
 import typing
 from dataclasses import dataclass, field
-from enum import Enum, auto
+from enum import Enum
 from functools import wraps
 from typing import Dict, Tuple, Optional, List, Callable, Any
 
@@ -41,28 +41,6 @@ logging.getLogger().setLevel(logging.DEBUG)
 class AutoName(Enum):
     def _generate_next_value_(name, start, count, last_values):
         return name
-
-
-class WorkloadType(str, AutoName):
-    """Every Workload / WorkNode should refer to a definitive type to determine behavior."""
-    # Level "zero" request types
-    request_type_username_mention = auto()
-    request_type_private_message = auto()
-    request_type_chat = auto()
-
-    # Parsing actions
-    parse_for_reddit_domain_urls = auto()
-    parse_top_level_comments = auto()
-    parse_item_for_tables = auto()
-
-    # Rolling actions
-    roll_table = auto()
-    roll_for_table_outcome = auto()
-    roll_stats = auto()
-    roll_specific_request = auto()
-
-    # Other actions
-    follow_link = auto()
 
 
 class WorkloadOutput:
@@ -96,11 +74,11 @@ class WorkNode(Workload, NodeMixin):
             node.do_my_work()
 
     def do_my_work(self):
-        """Examine the type of work you are and delegate it out."""
-        self.logger.info(f"Node {self} is doing work...")
+        """Examine the type of worknodes you are and delegate it out."""
+        self.logger.info(f"Node {self} is doing worknodes...")
 
         resolver = WorkResolver.get(self.work_type)
-        self.logger.debug(f"Resolving work of {self} via: {resolver.__name__}(*{self.args}, **{self.kwargs}")
+        self.logger.debug(f"Resolving worknodes of {self} via: {resolver.__name__}(*{self.args}, **{self.kwargs}")
         new_work, self.output = resolver(*self.args, **self.kwargs)
 
         if new_work:
@@ -133,7 +111,7 @@ class WorkResolverContainer:
         """Registers the decorated function as the resolver for the given work_type.
 
         The registered function
-        If additional work is required, the decorated function should return a collection containing the
+        If additional worknodes is required, the decorated function should return a collection containing the
         additional WorkNode containers.  Parent-child relationship will be written after return."""
 
         assert work_types, "Specify at least one WorkloadType to resolve via this function."
@@ -154,7 +132,7 @@ class WorkResolverContainer:
                 if base_function_return_value is None:
                     return [], None
 
-                # One return argument -- A single WorkNode is new work, else it's no new work and a return value
+                # One return argument -- A single WorkNode is new worknodes, else it's no new worknodes and a return value
                 if not isinstance(base_function_return_value, collections.Iterable):
                     if isinstance(base_function_return_value, WorkNode):
                         return [base_function_return_value], None
@@ -178,7 +156,7 @@ class WorkResolverContainer:
 
 @with_class_logger
 class WorkResolver(WorkResolverContainer):
-    """This class handles simple work generation and delegation.
+    """This class handles simple worknodes generation and delegation.
     For instance, the resolver for WorkType.parse_top_level_comments identifies the top level comments, and
     returns the WorkNode for parsing each individual comment, to be handled downstream.
     """
@@ -193,7 +171,8 @@ class WorkResolver(WorkResolverContainer):
     @WorkResolverContainer.workload_resolver(WorkloadType.parse_item_for_tables)
     def parse_item_for_table(item: typing.Union[Comment, Message, Submission]):
         return [WorkNode(WorkloadType.roll_table, t, name=f"Roll table: {t.description}")
-                for t in CMSParser(item, auto_parse=True).tables] or f"No table found in {str(type(item).__name__).lower()}"
+                for t in CMSParser(item, auto_parse=True).tables] or f"No table found in {str(
+            type(item).__name__).lower()}"
 
     @staticmethod
     @WorkResolverContainer.workload_resolver(WorkloadType.roll_table)
@@ -267,4 +246,3 @@ if __name__ == '__main__':
     print()
     for _type in unresolved:
         print(f"No resolver yet for WorkResolver.{_type}")
-

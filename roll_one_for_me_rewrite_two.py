@@ -4,7 +4,7 @@ import logging
 import logging.handlers
 import time
 
-from rofm.classes.core.work.workload import WorkNode, WorkloadType
+from rofm.classes.core.worknodes.workload import WorkNode, WorkloadType
 from rofm.classes.reddit import Reddit
 from rofm.classes.util.configuration import Config, Section, Subsection
 from rofm.classes.util.decorators import static_vars, occasional
