@@ -1,49 +1,75 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from dataclasses import dataclass, field
-from typing import Dict, Any
-
-from praw.models import Comment, Message
+from typing import Dict, Any, Union
 
 # noinspection PyMethodParameters
-from rofm.classes.core.worknodes.core import Worknode, WorkloadType
-from rofm.classes.core.worknodes.parsers import (RedditDomainUrls, MessageWorknode, CommentWorknode,
-                                                 SubmissionWorknode, TopLevelCommentsWorknode)
+import praw.models
+from anytree import RenderTree
+
+from rofm.classes.core.worknodes import parsers, core
 
 
 @dataclass
-class PMWorknode(Worknode):
-    args: Message
+class Request(ABC, core.Worknode):
+    args: Union[praw.models.Message, praw.models.Comment]
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
-    workload_type: WorkloadType = WorkloadType.request_type_private_message
+    workload_type: core.WorkloadType = core.WorkloadType.request_type_private_message
     name: str = "Request via PM"
 
     def __str__(self):
-        return "asdasd"  # super(RequestViaPrivateMessageWorknode, self).__str__()
+        return "\n\n\n".join((str(work) for work in self.additional_work if str(work))) + self.beep_boop()
 
-    def __repr__(self):
-        return super(PMWorknode, self).__repr__()
+    def beep_boop(self):
+        return ("*Beep boop, I'm a bot.*\n\n"
+                "*I am maintained by /u/PurelyApplied,"
+                " for whom these username mentions are a huge morale boost.*\n\n"
+                "*You can find my source code and more details about me"
+                " on [GitHub](https://github.com/PurelyApplied/roll_one_for_me).*\n\n"
+                "*The following is the work I did for you!"
+                "  I'm posting it for now for easier debugging and a little robot humble-bragging.*\n\n"
+                f"{self._get_indented_render_tree()}"
+                )
 
-    def _my_work_resolver(self):
-        self.additional_work = [RedditDomainUrls(self.args),
-                                MessageWorknode(self.args),
-                                MessageWorknode(self.args),
-                                ]
+    def _get_indented_render_tree(self):
+        return "\n".join(f"    {pre}{node}" for pre, _, node in (RenderTree(self)))
 
 
 @dataclass
-class MentionWorknode(Worknode):
-    args: Comment
+class PrivateMessage(Request):
+    args: praw.models.Message
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
-    workload_type: WorkloadType = WorkloadType.request_type_username_mention
+    workload_type: core.WorkloadType = core.WorkloadType.request_type_private_message
+    name: str = "Request via PM"
+
+    def __str__(self):
+        return super(PrivateMessage, self).__str__()
+
+    def __repr__(self):
+        return super(PrivateMessage, self).__repr__()
+
+    def _my_work_resolver(self):
+        self.additional_work = [
+            parsers.RedditDomainUrls(self.args),
+            parsers.Message(self.args),
+            parsers.SpecialRequest(self.args)
+        ]
+
+
+@dataclass
+class UsernameMention(core.Worknode):
+    args: praw.models.Comment
+    kwargs: Dict[str, Any] = field(default_factory=dict)
+
+    workload_type: core.WorkloadType = core.WorkloadType.request_type_username_mention
     name: str = "Request via username mention"
 
     def __str__(self):
-        return "asdasd"  # super(RequestViaUsernameMention, self).__str__()
+        return super(UsernameMention, self).__str__()
 
     def __repr__(self):
-        return super(MentionWorknode, self).__repr__()
+        return super(UsernameMention, self).__repr__()
 
     def _my_work_resolver(self):
         # Until it is decided otherwise, a mention gets three actions:
@@ -60,8 +86,8 @@ class MentionWorknode(Worknode):
             top_level_comments.remove(mention)
 
         self.additional_work = [
-            CommentWorknode(mention),
-            RedditDomainUrls(mention),
-            SubmissionWorknode(op),
-            TopLevelCommentsWorknode(top_level_comments)
+            parsers.Comment(mention),
+            parsers.RedditDomainUrls(mention),
+            parsers.Submission(op),
+            parsers.TopLevelComments(top_level_comments)
         ]
