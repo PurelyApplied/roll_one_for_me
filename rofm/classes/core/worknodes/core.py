@@ -20,7 +20,7 @@ should be specified by its parent.
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, auto
 from typing import Dict, Tuple, Optional, List, Any
 
 from anytree import NodeMixin, RenderTree, PreOrderIter
