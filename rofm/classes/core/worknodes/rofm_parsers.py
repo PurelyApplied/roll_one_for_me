@@ -2,14 +2,14 @@
 
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Union
+from typing import Dict, List, Any, Union, Tuple
 
 from praw.models import Comment, Submission, Message
 
-# noinspection PyMethodParameters
-from rofm.classes.core.worknodes.core import Worknode, FollowLink, WorkloadType
-from rofm.classes.core.worknodes.rollers import RollTable
+from rofm.classes.core.worknodes.rofm_core import Worknode, WorkloadType
+from rofm.classes.core.worknodes.rofm_rollers import RollTable
 from rofm.classes.html_parsers import CMSParser, get_links_from_text
+from rofm.classes.reddit import Reddit
 from rofm.classes.util.misc import get_html_from_cms
 
 logging.getLogger().setLevel(logging.DEBUG)
@@ -45,7 +45,7 @@ class MixedType(Worknode):
     name: str = "Parse item of unidentified type"
 
     def __str__(self):
-        raise NotImplementedError("Special requests not yet implemented.")
+        return "\n\n".join(str(c) for c in self.children)
 
     def __repr__(self):
         return super(MixedType, self).__repr__()
@@ -136,3 +136,37 @@ class SpecialRequest(Worknode):
 
     def _my_work_resolver(self):
         raise NotImplementedError("Special requests not yet implemented.")
+
+
+@dataclass
+class FollowLink(Worknode):
+    args: Tuple[str, str]  # text, href
+    kwargs: Dict[str, Any] = field(default_factory=dict)
+
+    # populated in post-init
+    text: str = None
+    href: str = None
+
+    workload_type: WorkloadType = WorkloadType.follow_link
+    name: str = "Consider following url"
+
+    def __post_init__(self):
+        self.text, self.href = self.args
+
+    def __str__(self):
+        if self.additional_work:
+            return f"From your link [{self.text}]({self.href}):\n\n{self.additional_work[0]}"
+        return (f"Your link [{self.text}]({self.href}] doesn't resolve for me, possibly because it's not on Reddit."
+                f"  I don't like to wander too far from home, sorry.")
+
+    def __repr__(self):
+        return super(FollowLink, self).__repr__()
+
+    def _my_work_resolver(self):
+        _, link_href = self.args
+        reddit_item = Reddit.try_to_follow_link(link_href)
+        if reddit_item is None:
+            return "Refusing to follow non-Reddit link."
+
+        self.additional_work = [MixedType(reddit_item)]
+

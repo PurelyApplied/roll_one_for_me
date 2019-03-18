@@ -24,10 +24,10 @@ from typing import Dict, Any
 import dice
 from anytree import RenderTree
 
+import rofm.classes.core.worknodes.rofm_requests
 # noinspection PyMethodParameters
-from rofm.classes.core.worknodes.core import Worknode, WorkloadType
-from rofm.classes.core.worknodes.requests import PrivateMessage
-from rofm.classes.reddit import Reddit
+from rofm.classes.core.worknodes.rofm_core import Worknode, WorkloadType
+from rofm.classes.reddit import Reddit, comment_contains_username
 from rofm.classes.tables import Table
 
 logging.getLogger().setLevel(logging.DEBUG)
@@ -42,7 +42,9 @@ class RollTable(Worknode):
     name: str = "Roll table"
 
     def __str__(self):
-        raise NotImplementedError("Special requests not yet implemented.")
+        # A rolled table should have one child holding the value.
+        rolled_value = self.children[0].output
+        return f"{self.args.description}:    \n{self.args.dice} -> {rolled_value}: {self.args.get(rolled_value)}\n\n\n"
 
     def __repr__(self):
         return super(RollTable, self).__repr__()
@@ -60,7 +62,7 @@ class RollAny(Worknode):
     name: str = "Roll the dice"
 
     def __str__(self):
-        raise NotImplementedError("Special requests not yet implemented.")
+        raise NotImplementedError("RollAny not expected to be posted directly.  Fetch value from output.")
 
     def __repr__(self):
         return super(RollAny, self).__repr__()
@@ -70,12 +72,36 @@ class RollAny(Worknode):
 
 
 if __name__ == '__main__':
-    Reddit.login()
-    pm = next(Reddit.r.inbox.messages())
-    pm_node = PrivateMessage(pm)
-    pm_node.name = "test pm"
-    pm_node.do_all_work()
+    def do_test_run_with_pm():
+        import rofm.classes.core.worknodes.rofm_requests
+        Reddit.login()
 
-    node_render = RenderTree(pm_node)
-    shifted_node_render = " " * 4 + "\n    ".join(str(node_render).split("\n"))
-    print(shifted_node_render)
+        pm = next(Reddit.r.inbox.messages())
+        node = rofm.classes.core.worknodes.rofm_requests.PrivateMessage(pm)
+        node.do_all_work()
+        node_render = RenderTree(node)
+        shifted_node_render = " " * 4 + "\n    ".join(str(node_render).split("\n"))
+        return shifted_node_render
+
+
+    def do_test_run_with_mention():
+        Reddit.login()
+
+        random_mention = next(mention for mention in Reddit.r.inbox.all() if comment_contains_username(mention))
+        node = rofm.classes.core.worknodes.rofm_requests.UsernameMention(random_mention)
+        node.do_all_work()
+        node_render = RenderTree(node)
+        shifted_node_render = " " * 4 + "\n    ".join(str(node_render).split("\n"))
+        return shifted_node_render
+
+
+    print(do_test_run_with_mention())
+
+#
+# TODO: 'https://www.reddit.com/r/DnDBehindTheScreen/comments/ale18z/oneroll_society_blunderbuss_engine/'
+# Sub-enumeration doesn't parse well, but that's maybe okay.  Perceived header as parent header.
+# Also rolled the random enumeration for the mission-statement.  Maybe lock free-standing and others by a [[roll all]]
+
+# TODO: Improve header detection for free-standing enumerations.
+
+# TODO d100 subreddit

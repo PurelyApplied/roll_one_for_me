@@ -23,12 +23,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Dict, Tuple, Optional, List, Any
 
-from anytree import NodeMixin, RenderTree, PreOrderIter
-
-# noinspection PyMethodParameters
-from rofm.classes.core.worknodes.parsers import MixedType
-from rofm.classes.core.worknodes.requests import PrivateMessage
-from rofm.classes.reddit import Reddit
+from anytree import NodeMixin, PreOrderIter
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -123,46 +118,15 @@ class Worknode(ABC, NodeMixin):
         return f"<{display_name} :: {in_as_string} {out_as_string}>"
 
 
-@dataclass
-class FollowLink(Worknode):
-    args: Tuple[str, str]  # text, href
-    kwargs: Dict[str, Any] = field(default_factory=dict)
-
-    # populated in post-init
-    text: str = None
-    href: str = None
-
-    workload_type: WorkloadType = WorkloadType.follow_link
-    name: str = "Consider following url"
-
-    def __post_init__(self):
-        self.text, self.href = self.args
-
-    def __str__(self):
-        if self.additional_work:
-            return f"From your link [{self.text}]({self.href}):\n\n{self.additional_work[0]}"
-        return (f"Your link [{self.text}]({self.href}] doesn't resolve for me, possibly because it's not on Reddit."
-                f"  I don't like to wander too far from home, sorry.")
-
-    def __repr__(self):
-        return super(FollowLink, self).__repr__()
-
-    def _my_work_resolver(self):
-        _, link_href = self.args
-        reddit_item = Reddit.try_to_follow_link(link_href)
-        if reddit_item is None:
-            return "Refusing to follow non-Reddit link."
-
-        self.additional_work = [MixedType(reddit_item)]
-
-
-if __name__ == '__main__':
-    Reddit.login()
-    pm = next(Reddit.r.inbox.messages())
-    pm_node = PrivateMessage(pm)
-    pm_node.name = "test pm"
-    pm_node.do_all_work()
-
-    node_render = RenderTree(pm_node)
-    shifted_node_render = " " * 4 + "\n    ".join(str(node_render).split("\n"))
-    print(shifted_node_render)
+# if __name__ == '__main__':
+    # from rofm.classes.core.worknodes.requests import PrivateMessage
+    #
+    # Reddit.login()
+    # pm = next(Reddit.r.inbox.messages())
+    # pm_node = PrivateMessage(pm)
+    # pm_node.name = "test pm"
+    # pm_node.do_all_work()
+    #
+    # node_render = RenderTree(pm_node)
+    # shifted_node_render = " " * 4 + "\n    ".join(str(node_render).split("\n"))
+    # print(shifted_node_render)

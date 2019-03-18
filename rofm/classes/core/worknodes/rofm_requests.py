@@ -6,15 +6,15 @@ from typing import Dict, Any, Union
 import praw.models
 from anytree import RenderTree
 
-from rofm.classes.core.worknodes import parsers, core
+from rofm.classes.core.worknodes import rofm_core, rofm_parsers
 
 
 @dataclass
-class Request(ABC, core.Worknode):
+class Request(rofm_core.Worknode, ABC):
     args: Union[praw.models.Message, praw.models.Comment]
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
-    workload_type: core.WorkloadType = core.WorkloadType.request_type_private_message
+    workload_type: rofm_core.WorkloadType = rofm_core.WorkloadType.request_type_private_message
     name: str = "Request via PM"
 
     def __str__(self):
@@ -40,7 +40,7 @@ class PrivateMessage(Request):
     args: praw.models.Message
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
-    workload_type: core.WorkloadType = core.WorkloadType.request_type_private_message
+    workload_type: rofm_core.WorkloadType = rofm_core.WorkloadType.request_type_private_message
     name: str = "Request via PM"
 
     def __str__(self):
@@ -51,18 +51,18 @@ class PrivateMessage(Request):
 
     def _my_work_resolver(self):
         self.additional_work = [
-            parsers.RedditDomainUrls(self.args),
-            parsers.Message(self.args),
-            parsers.SpecialRequest(self.args)
+            rofm_parsers.RedditDomainUrls(self.args),
+            rofm_parsers.Message(self.args),
+            rofm_parsers.SpecialRequest(self.args)
         ]
 
 
 @dataclass
-class UsernameMention(core.Worknode):
+class UsernameMention(rofm_core.Worknode):
     args: praw.models.Comment
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
-    workload_type: core.WorkloadType = core.WorkloadType.request_type_username_mention
+    workload_type: rofm_core.WorkloadType = rofm_core.WorkloadType.request_type_username_mention
     name: str = "Request via username mention"
 
     def __str__(self):
@@ -86,8 +86,8 @@ class UsernameMention(core.Worknode):
             top_level_comments.remove(mention)
 
         self.additional_work = [
-            parsers.Comment(mention),
-            parsers.RedditDomainUrls(mention),
-            parsers.Submission(op),
-            parsers.TopLevelComments(top_level_comments)
+            rofm_parsers.Comment(mention),
+            rofm_parsers.RedditDomainUrls(mention),
+            rofm_parsers.Submission(op),
+            rofm_parsers.TopLevelComments(top_level_comments)
         ]

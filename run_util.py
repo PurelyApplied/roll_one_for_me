@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 from rofm.classes.reddit import Reddit
 
 headered_enumeration_submission_example = \
