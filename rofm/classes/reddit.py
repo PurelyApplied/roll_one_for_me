@@ -9,6 +9,9 @@ from praw.models.reddit.message import Message
 
 from rofm.classes.util.decorators import with_class_logger
 
+TIGHT_NEWLINE = "    \n"
+WIDE_NEWLINE = "\n\n"
+
 
 def comment_contains_username(comment: Comment):
     return Reddit.r.user.me().name in comment.body

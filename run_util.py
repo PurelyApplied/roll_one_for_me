@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-from rofm.classes.reddit import Reddit
+import logging
+
+from anytree import RenderTree
+
+import rofm.classes.worknodes
+# noinspection PyMethodParameters
+from rofm.classes.reddit import Reddit, comment_contains_username
 
 headered_enumeration_submission_example = \
     r'https://www.reddit.com/r/DnDBehindTheScreen/comments/ain51n/party_bond_generator_tables/'
@@ -14,26 +20,33 @@ two_col_weighted_outcome_submission_example = \
 wide_table_submission_example = \
     r'https://www.reddit.com/r/BehindTheTables/comments/ahba3r/trail_rations/'
 
-if __name__ == '__main__':
+logging.getLogger().setLevel(logging.DEBUG)
+
+
+def do_test_run_with_pm():
     Reddit.login()
+
     pm = next(Reddit.r.inbox.messages())
-    # node = WorkNode(WorkloadType.request_type_private_message, pm, name="test pm")
-    # node.do_all_work()
-    # node_render = RenderTree(node)
-    # shifted_node_render = " " * 4 + "\n    ".join(str(node_render).split("\n"))
-    # print(shifted_node_render)
-    #
-    # random_mention = next(mention for mention in Reddit.r.inbox.all() if comment_contains_username(mention))
-    # work = WorkNode(WorkloadType.request_type_username_mention, random_mention)
-    # work.do_all_work()
-    # render = RenderTree(work)
-    # shifted_render = " " * 4 + "\n    ".join(str(render).split("\n"))
-    # print(shifted_render)
-#
-# TODO: 'https://www.reddit.com/r/DnDBehindTheScreen/comments/ale18z/oneroll_society_blunderbuss_engine/'
-# Sub-enumeration doesn't parse well, but that's maybe okay.  Perceived header as parent header.
-# Also rolled the random enumeration for the mission-statement.  Maybe lock free-standing and others by a [[roll all]]
+    node = rofm.classes.worknodes.PrivateMessage(pm)
+    node.do_all_work()
+    node_render = RenderTree(node)
+    shifted_node_render = " " * 4 + "\n    ".join(str(node_render).split("\n"))
+    return node, shifted_node_render
 
-# TODO: Improve header detection for free-standing enumerations.
 
-# TODO d100 subreddit
+def do_test_run_with_mention():
+    Reddit.login()
+
+    mentions = (mention for mention in Reddit.r.inbox.all() if comment_contains_username(mention))
+    _, random_mention = next(mentions), next(mentions)
+    node = rofm.classes.worknodes.UsernameMention(random_mention)
+    node.do_all_work()
+    node_render = RenderTree(node)
+    shifted_node_render = " " * 4 + "\n    ".join(str(node_render).split("\n"))
+    return node, shifted_node_render
+
+
+if __name__ == '__main__':
+    _node, render = do_test_run_with_mention()
+    print(render)
+    print(str(_node))
