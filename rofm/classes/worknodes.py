@@ -129,19 +129,6 @@ class Worknode(ABC, NodeMixin):
         return repr(self).strip("'")
 
 
-
-# if __name__ == '__main__':
-    # from rofm.classes.core.worknodes.requests import PrivateMessage
-    #
-    # Reddit.login()
-    # pm = next(Reddit.r.inbox.messages())
-    # pm_node = PrivateMessage(pm)
-    # pm_node.name = "test pm"
-    # pm_node.do_all_work()
-    #
-    # node_render = RenderTree(pm_node)
-    # shifted_node_render = " " * 4 + "\n    ".join(str(node_render).split("\n"))
-    # print(shifted_node_render)
 @dataclass
 class TopLevelComments(Worknode):
     args: List[Comment]
@@ -326,7 +313,10 @@ class Request(Worknode, ABC):
     def _get_indented_render_tree(self):
         # Use __repr__ so that this isn't recursive, and also since it's just for debugging.
         # But then strip the quotes so we don't get " '<Roll table :: ...'"
-        return "\n".join(f"    {pre}{node._almost_repr()}" for pre, _, node in (RenderTree(self)))
+
+        #  These are Worknodes, but RenderTree doens't realize that.
+        # noinspection PyProtectedMember
+        return "\n".join(f"    {pre}{worknode._almost_repr()}" for pre, _, worknode in (RenderTree(self)))
 
 
 @dataclass
