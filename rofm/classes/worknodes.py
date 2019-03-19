@@ -43,6 +43,8 @@ class AutoName(Enum):
 
 class WorkloadType(str, AutoName):
     """Every Workload / WorkNode should refer to a definitive type to determine behavior."""
+    # This may now be a deprecated concept, supplanted by better class definitions in WorkNodes.
+
     # Level "zero" request types
     request_type_username_mention = auto()
     request_type_private_message = auto()
@@ -114,16 +116,25 @@ class Worknode(ABC, NodeMixin):
         display_name = self.name or self.__class__.__name__
 
         in_as_string = '('
-        in_as_string += f"{self.args}" if self.args else ''
+        in_as_string += self.get_display_args()
         in_as_string += ',' if self.args and self.kwargs else ''
-        in_as_string += f"{self.kwargs}" if self.kwargs else ''
+        in_as_string += self.get_display_kwargs()
         in_as_string += ')'
 
-        out_as_string = (
-            f"-> !! threw {self.exception}" if self.exception else
-            f"-> {self.output}" if self.output else "")
+        out_as_string = self.get_display_output_or_exception()
 
         return f"<{display_name} :: {in_as_string} {out_as_string}>"
+
+    def get_display_output_or_exception(self):
+        return (f"-> !! threw {self.exception}"
+                if self.exception else
+                f"-> {self.output}" if self.output else "")
+
+    def get_display_kwargs(self):
+        return f"{self.kwargs}" if self.kwargs else ''
+
+    def get_display_args(self):
+        return f"{self.args}" if self.args else ''
 
     def _almost_repr(self):
         return repr(self).strip("'")
@@ -149,6 +160,9 @@ class TopLevelComments(Worknode):
     def __repr__(self):
         return super(TopLevelComments, self).__repr__()
 
+    def get_display_args(self):
+        return "<Comments: [" + ", ".join(str(c.id) for c in self.args) + "]>"
+
 
 @dataclass
 class MixedType(Worknode):
@@ -159,7 +173,7 @@ class MixedType(Worknode):
     name: str = "Parse item of unidentified type"
 
     def __str__(self):
-        return "\n\n".join(str(c) for c in self.children)
+        return f"{WIDE_NEWLINE}-----{WIDE_NEWLINE}".join(str(c) for c in self.children)
 
     def __repr__(self):
         return super(MixedType, self).__repr__()
@@ -240,10 +254,10 @@ class SpecialRequest(Worknode):
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
     workload_type: WorkloadType = WorkloadType.parse_for_special_requests
-    name: str = "Search for Reddit urls"
+    name: str = "Search for special requests"
 
     def __str__(self):
-        raise NotImplementedError("Special requests not yet implemented.")
+        return "Not yet implemented"
 
     def __repr__(self):
         return super(SpecialRequest, self).__repr__()
@@ -269,7 +283,7 @@ class FollowLink(Worknode):
 
     def __str__(self):
         if self.additional_work:
-            return f"From your link [{self.text}]({self.href}):\n\n{self.additional_work[0]}"
+            return f"#####From your link [{self.text}]({self.href}):\n\n{self.additional_work[0]}"
         return (f"Your link [{self.text}]({self.href}] doesn't resolve for me, possibly because it's not on Reddit."
                 f"  I don't like to wander too far from home, sorry.")
 
@@ -293,8 +307,15 @@ class Request(Worknode, ABC):
     workload_type: WorkloadType = WorkloadType.request_type_private_message
     name: str = "Request via PM"
 
+    def get_response_text(self, with_work_trace=False):
+        if not with_work_trace:
+            return f"{self}{WIDE_NEWLINE}{self.beep_boop()}"
+
+        return f"{self}{WIDE_NEWLINE}{self.beep_boop()}{TIGHT_NEWLINE}{self.humble_brag()}"
+
     def __str__(self):
-        return "\n\n\n".join((str(work) for work in self.additional_work if str(work))) + self.beep_boop()
+        """Core response text, not including the bot tag."""
+        return f"{WIDE_NEWLINE}-----{WIDE_NEWLINE}".join((str(work) for work in self.children if str(work)))
 
     def __repr__(self):
         return super(Request, self).__repr__()
@@ -304,19 +325,26 @@ class Request(Worknode, ABC):
                 f"*I am maintained by /u/PurelyApplied,"
                 f" for whom these username mentions are a huge morale boost.*{TIGHT_NEWLINE}"
                 f"*You can find my source code and more details about me"
-                f" on [GitHub](https://github.com/PurelyApplied/roll_one_for_me).*{TIGHT_NEWLINE}"
-                f"*The following is the work I did for you!"
-                f"  I'm posting it for now for easier debugging and a little bot humble-bragging.*{WIDE_NEWLINE}"
-                f"{self._get_indented_render_tree()}"
+                f" on [GitHub](https://github.com/PurelyApplied/roll_one_for_me).*"
                 )
 
-    def _get_indented_render_tree(self):
+    def humble_brag(self):
+        return (f"*The following is the work I did for you!"
+                f"  I'm posting it for now for easier debugging and a little bot humble-bragging.*{WIDE_NEWLINE}"
+                f"{self.get_most_of_render_tree()}"
+                )
+
+    def get_most_of_render_tree(self):
         # Use __repr__ so that this isn't recursive, and also since it's just for debugging.
         # But then strip the quotes so we don't get " '<Roll table :: ...'"
 
+        # We also don't dump any top-level-comments that don't make the cut, so we're not spamming in the footer.
+
         #  These are Worknodes, but RenderTree doens't realize that.
         # noinspection PyProtectedMember
-        return "\n".join(f"    {pre}{worknode._almost_repr()}" for pre, _, worknode in (RenderTree(self)))
+        return "\n".join(f"    {pre}{worknode._almost_repr()}"
+                         for pre, _, worknode in (RenderTree(self))
+                         if not isinstance(worknode, Comment) or worknode.children)
 
 
 @dataclass
@@ -328,7 +356,7 @@ class PrivateMessage(Request):
     name: str = "Request via PM"
 
     def __str__(self):
-        raise NotImplementedError("You need to implement PM responses.")
+        return super(PrivateMessage, self).__str__()
 
     def __repr__(self):
         return super(PrivateMessage, self).__repr__()

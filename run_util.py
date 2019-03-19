@@ -47,6 +47,10 @@ def do_test_run_with_mention():
 
 
 if __name__ == '__main__':
-    _node, render = do_test_run_with_mention()
-    print(render)
-    print(str(_node))
+    _node, render = do_test_run_with_pm()
+    with_footer = _node.get_response_text(True)
+    without_footer = _node.get_response_text(False)
+
+    print(without_footer)
+
+    print(f"Response was {len(with_footer)} with the footer, and {len(without_footer)}, for a difference of {len(with_footer) - len(without_footer)} characters.")
