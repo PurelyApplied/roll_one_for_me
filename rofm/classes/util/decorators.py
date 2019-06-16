@@ -6,6 +6,8 @@ import unittest
 from functools import wraps
 
 logging.getLogger().setLevel(logging.DEBUG)
+
+
 def with_class_logger(cls):
     cls.logger = logging.getLogger(f"{cls.__name__}")
     return cls
@@ -87,11 +89,6 @@ def retry(maximum_count=1,
                     raise e
         return wrapped
     return decorator
-
-
-@occasional(counter=-1, frequency=5)
-def hello_world():
-    logging.info("Hello world!")
 
 
 class DecoratorTests(unittest.TestCase):

@@ -1,3 +1,5 @@
+import pytest
+
 d3_table_text = """
 d3 This God is
 
@@ -7,5 +9,3 @@ d3 This God is
 
 3. Neutral"""
 
-if __name__ == '__main__':
-    pass
